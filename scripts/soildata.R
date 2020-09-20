@@ -9,8 +9,8 @@ library(proj4)
 # Load --------------------------------------------------------------------
 # Note: soil data come from gSSURGO, organized by "mukeys" (Map Unit Keys)
 
-unique <- read.csv("raw_data/actual_unique.csv", header = TRUE, sep = ",")
-soildata <- raster('raw_data/GCS_Raster_1/GCSraster1.bil')
+unique <- read.csv("../../raw_data/actual_unique.csv", header = TRUE, sep = ",")
+soildata <- raster('../../raw_data/GCS_Raster_1/GCSraster1.bil')
 project.crs <- crs(soildata)
 
 
@@ -32,7 +32,7 @@ unique1$mukey[unique1$mukey == 2147483647] <- NA
 unique1 <- as.data.frame((unique1))
 
 # Get all soil properties we care about
-component <- read.table("raw_data/component.txt", header = TRUE, sep = ",")
+component <- read.table("../../raw_data/component.txt", header = TRUE, sep = ",")
 component1 <- component[, c(3,109:136)]
 
 
@@ -70,6 +70,6 @@ final_soildata <- final_soildata[-c(2365:2369),]
 
 # Save --------------------------------------------------------------------
 
-saveRDS(final_soildata, 'modeling_data/final_soildata.rds')
+saveRDS(final_soildata, '../../modeling_data/final_soildata.rds')
 
 
