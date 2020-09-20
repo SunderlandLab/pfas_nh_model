@@ -5,8 +5,8 @@ library(tidyverse)
 
 # Load --------------------------------------------------------------------
 
-merged_variables <- readRDS('modeling_data/merged_variables.rds')
-unique_ivs <- readRDS('modeling_data/unique_ivs.rds')
+merged_variables <- readRDS('../../modeling_data/merged_variables.rds')
+unique_ivs <- readRDS('../../modeling_data/unique_ivs.rds')
 
 
 # Generate separate dataframe for each compound ---------------------------
@@ -28,5 +28,5 @@ for (i in 1:length(compounds_data)) {
 
 # Save --------------------------------------------------------------------
 
-saveRDS(compounds_data, 'modeling_data/compounds_data.rds')
+saveRDS(compounds_data, '../../modeling_data/compounds_data.rds')
 
