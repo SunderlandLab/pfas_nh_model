@@ -5,7 +5,7 @@ library(tidyverse)
 
 # Load --------------------------------------------------------------------
 
-new_finalind <- readRDS('modeling_data/new_finalind.rds')
+new_finalind <- readRDS('../../modeling_data/new_finalind.rds')
 
 
 # Clean and coerce types --------------------------------------------------
@@ -62,27 +62,31 @@ industries_agg <- aggregate(.~StationID+NAICSgroups, industries1, FUN = sum)
 
 codes <- c('OI', 'Pl', 'AW', 'Pr', 'S', 'T')
 ind <- paste0('Impact', codes)
-ind2 <- paste0('Impact', codes, '2')
+ind2 <- paste0('Impact', codes, '2') # impact as 1/e^d*sales volume
+ind3 <- paste0('Impact', codes, '3') # impact as 1/e^d
 
 for (i in 1:length(codes)) {
   industries_agg[[ind[i]]] <- ifelse(industries_agg$NAICSgroups == codes[i], 1, 0)
 }
 
-# 1/e^d * sales volume by industry
 for (i in 1:length(ind)) {
+  # 1/e^d * sales volume by industry
   industries_agg[[ind2[i]]] <- industries_agg[[ind[i]]]*industries_agg$impactDxS
+  
+  # 1/e^d by industry
+  industries_agg[[ind3[i]]] <- industries_agg[[ind[i]]]*industries_agg$impactD
   industries_agg[[ind[i]]] <- NULL
 }
 
 
 # Aggregate
 final_industries <- aggregate(.~StationID, 
-                              industries_agg[, c('StationID', ind2)], 
+                              industries_agg[, c('StationID', ind2, ind3)], 
                               FUN = sum)
 
 # Rename columns
-colnames(final_industries)[-1] <- ind2
+colnames(final_industries)[-1] <- c(ind2, ind3)
 
 # Save --------------------------------------------------------------------
 
-saveRDS(final_industries, 'modeling_data/final_industries.rds')
+saveRDS(final_industries, '../../modeling_data/final_industries.rds')
