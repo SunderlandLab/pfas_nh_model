@@ -9,7 +9,7 @@ library(raster)
 
 # Load --------------------------------------------------------------------
 
-unique <- read.csv("raw_data/actual_unique.csv", header = TRUE, sep = ",")
+unique <- read.csv("../../raw_data/actual_unique.csv", header = TRUE, sep = ",")
 
 # Project wells -----------------------------------------------------------
 
@@ -20,7 +20,7 @@ coordinates(unique_wells) <- c("Longitude", "Latitude")
 proj4string(unique_wells) <- CRS("+proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0")
 proj_wells <- spTransform(unique_wells,CRS("+proj=utm +zone=18 +datum=WGS84 +units=m"))
 
-businesses <- readOGR(dsn = "raw_data/NH_businesses_2016", layer = "NH_businesses_2016")
+businesses <- readOGR(dsn = "../../raw_data/NH_businesses_2016", layer = "NH_businesses_2016")
 businesses <- businesses[, c("CONAME","NAICS","SALESVOL")]
 proj_businesses <- spTransform(businesses,CRS("+proj=utm +zone=18 +datum=WGS84 +units=m"))
 
@@ -62,7 +62,7 @@ for(i in 1:nrow(proj_wells)) {
     len <- length(biz_subset)
     y <- proj_wells[i,]
     x <- y[rep(seq_len(1), each = len),]
-    # Calculate distance between well and point source
+    # Calculate distance between well and point source, unit is meter
     biz_distances <- pointDistance(proj_wells[i,], biz_subset, lonlat = FALSE)
     biz_subset$distances <- biz_distances
     biz_subset <- as.data.frame(biz_subset)
@@ -80,7 +80,7 @@ new_finalind <- rbind(new_finalind[,-2], TCI_data, SG_data)
 
 # Save --------------------------------------------------------------------
 
-saveRDS(new_finalind, 'modeling_data/new_finalind.rds')
+saveRDS(new_finalind, '../../modeling_data/new_finalind.rds')
 
 
 
