@@ -5,14 +5,14 @@ library(tidyverse)
 
 # Load --------------------------------------------------------------------
 # Raw datasets
-bedrock <- read.csv("raw_data/bedrock_extraction.csv", header = TRUE, sep = ",", na.strings = c("", " ", "NA"))
-recharge <- read.csv("raw_data/recharge.csv", header = TRUE, sep = ",", na.strings = c("", " ", "NA"))
-precip <- read.csv("raw_data/precip_PFAS.csv", header = TRUE, sep = ",", na.strings = c("", " ", "NA"))
-recharge <- read.csv("raw_data/recharge.csv", header = TRUE, sep = ",", na.strings = c("", " ", "NA"))
+bedrock <- read.csv("../../raw_data/bedrock_extraction.csv", header = TRUE, sep = ",", na.strings = c("", " ", "NA"))
+recharge <- read.csv("../../raw_data/recharge.csv", header = TRUE, sep = ",", na.strings = c("", " ", "NA"))
+precip <- read.csv("../../raw_data/precip_PFAS.csv", header = TRUE, sep = ",", na.strings = c("", " ", "NA"))
+recharge <- read.csv("../../raw_data/recharge.csv", header = TRUE, sep = ",", na.strings = c("", " ", "NA"))
 # Processed RDS's
-final_industries <- readRDS('modeling_data/final_industries.rds')
-final_soildata <- readRDS('modeling_data/final_soildata.rds')
-PFASwells <- readRDS('modeling_data/PFASwells.rds')
+final_industries <- readRDS('../../modeling_data/final_industries.rds')
+final_soildata <- readRDS('../../modeling_data/final_soildata.rds')
+PFASwells <- readRDS('../../modeling_data/PFASwells.rds')
 
 # Remove duplicates and aggregate -----------------------------------------
 
@@ -100,6 +100,7 @@ unique_ivs$hydgrpdcdC <- as.factor(unique_ivs$hydgrpdcdC)
 
 
 
+
 # Remove unnecessary columns ----------------------------------------------
 # Option 1:
 # (previously unique_ivs <- unique_ivs[,-c(10,12:14,17,21,24:25,32,35,38)])
@@ -116,7 +117,7 @@ unique_ivs <- unique_ivs[, -which(names(unique_ivs) %in% rm)]
 
 # Save --------------------------------------------------------------------
 
-saveRDS(merged_variables, 'modeling_data/merged_variables.rds')
-saveRDS(unique_ivs, 'modeling_data/unique_ivs.rds')
+saveRDS(merged_variables, '../../modeling_data/merged_variables.rds')
+saveRDS(unique_ivs, '../../modeling_data/unique_ivs.rds')
 
 
