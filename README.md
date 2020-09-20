@@ -1,8 +1,15 @@
 # pfas_nh_model
+## Introduction
 Predictive model for PFAS levels in private wells in NH
 
-Order and purpose of scripts (output given in parentheses), in the /scripts folder
-Data cleaning and processing
+## Authors
+* Xindi C. Hu
+* Beverly Ge
+* Elsie M. Sunderland
+
+##  Order and purpose of scripts (output given in parentheses)
+All can be found in the /scripts folder
+### Data cleaning and processing
 - read_csv.R   : read raw datasets with slight formatting/removal of extreme values
 								 (modeling_data/PFASwells1.rds, modeling_data/pfoapfhxa.rds)
 - recode.R     : recode detects/results, add binary variable, merge two main data files
@@ -19,7 +26,7 @@ Data cleaning and processing
 - finalize.R   : finalize data for 5 compounds as separate dataframes, contained in 1 list
                  (modeling_data/compounds_data.rds)
 
-Modeling
+### Modeling
 - logreg.R     : logistic regression
                  (models/compounds_logreg.rds)
 - eval_logreg.R: evaluate logistic regression models
@@ -29,13 +36,12 @@ Modeling
 - eval_forest.R: evaluate random forests
                  (models_forest_eval)
 
-Supplemental scripts
+### Supplemental scripts
 - test_temporal_variability.R
 - corrplot.R (not finalized yet)
 - Makefile: be sure to run "xcode-select --install" in the Terminal tab first
 
-
-Necessary packages
+### Necessary packages
 - tidyverse
 - raster
 - rgdal
