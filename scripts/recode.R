@@ -5,8 +5,8 @@ library(tidyverse)
 
 # Load --------------------------------------------------------------------
 
-PFASwells1 <- readRDS('modeling_data/PFASwells1.rds')
-pfoapfhxa <- readRDS('modeling_data/pfoapfhxa.rds')
+PFASwells1 <- readRDS('../../modeling_data/PFASwells1.rds')
+pfoapfhxa <- readRDS('../../modeling_data/pfoapfhxa.rds')
 
 
 # Recode: 0 = below detection limit, 1 = above detection limit ------------
@@ -147,6 +147,6 @@ colnames(PFASwells)[6] <- "PFOSreg"
 
 # Save --------------------------------------------------------------------
 
-saveRDS(PFASwells, 'modeling_data/PFASwells.rds')
+saveRDS(PFASwells, '../../modeling_data/PFASwells.rds')
 
 
