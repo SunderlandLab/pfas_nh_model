@@ -1,16 +1,16 @@
 # Read in csv's and clean compound data
 # Library -----------------------------------------------------------------
-
+library(tidyverse)
 
 # Load --------------------------------------------------------------------
 
-PFASwells1 <- read.csv("raw_data/PFAS_Ronly.csv", header = TRUE, sep = ",")
-pfoapfhxa <- read.csv("raw_data/PFOAPFHXA.csv")
+PFASwells1 <- read_csv("../../raw_data/PFAS_Ronly.csv")
+pfoapfhxa <- read_csv("../../raw_data/PFOAPFHXA.csv")
 
 
 # Remove wells with very high detection limits ----------------------------
 
-pfoapfhxa <- pfoapfhxa[-which(pfoapfhxa$StationID == "MTBE_2725"),]
+pfoapfhxa <- pfoapfhxa%>%filter(StationID != "MTBE_2725")
 # This is 1531010_008
 pfoapfhxa <- pfoapfhxa[-which(pfoapfhxa$PFOAnumeric == 18.5),] 
 # This is 1531010_009
@@ -27,7 +27,7 @@ pfoapfhxa$StationID <- as.character(pfoapfhxa$StationID)
 
 # Save --------------------------------------------------------------------
 
-saveRDS(PFASwells1, 'modeling_data/PFASwells1.rds')
-saveRDS(pfoapfhxa, 'modeling_data/pfoapfhxa.rds')
+saveRDS(PFASwells1, '../../modeling_data/PFASwells1.rds')
+saveRDS(pfoapfhxa, '../../modeling_data/pfoapfhxa.rds')
 
 
