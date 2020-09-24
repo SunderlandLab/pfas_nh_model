@@ -95,6 +95,7 @@ unique_ivs$drclassdcd = unique_ivs$hydgrpdcd = unique_ivs$bedrock <- NULL
 unique_ivs$bedrock_M <- as.factor(unique_ivs$bedrock_M)
 unique_ivs$drclassdcdW <- as.factor(unique_ivs$drclassdcdW)
 unique_ivs$drclassdcdP <- as.factor(unique_ivs$drclassdcdP)
+unique_ivs$hydgrpdcdA <- as.factor(unique_ivs$hydgrpdcdA)
 unique_ivs$hydgrpdcdB <- as.factor(unique_ivs$hydgrpdcdB)
 unique_ivs$hydgrpdcdC <- as.factor(unique_ivs$hydgrpdcdC)
 
@@ -104,10 +105,19 @@ unique_ivs$hydgrpdcdC <- as.factor(unique_ivs$hydgrpdcdC)
 # Remove unnecessary columns ----------------------------------------------
 # Option 1:
 # (previously unique_ivs <- unique_ivs[,-c(10,12:14,17,21,24:25,32,35,38)])
-rm <- c("sandtotal_r", "sandco_r", "sandmed_r", "sandfine_r", "siltco_r", "ksat_r", 
-       "ph1to1h2o_r", "aws0_999", "drclassdcdE", "hydgrpdcdA","hydgrpdcdD") 
-unique_ivs <- unique_ivs[, -which(names(unique_ivs) %in% rm)] 
-
+# rm <- c("sandtotal_r", "sandco_r", "sandmed_r", "sandfine_r", "siltco_r", "ksat_r", 
+#         "siltco_r",    "siltfine_r",
+#        "ph1to1h2o_r", "aws0_999", "drclassdcdE", "hydgrpdcdB","hydgrpdcdC","hydgrpdcdD") 
+#chu: refactor 09/23/2020, keep variables in the SI
+unique_ivs <- unique_ivs%>%
+  dplyr::select(precip, recharge, contains("Impact"),
+                sandtotal_r, silttotal_r, claytotal_r, dbthirdbar_r,
+                ksat_r, awc_r, cec7_r, ph1to1h2o_r, aws0_999,
+                soc0_999, slopegradwta, brockdepmin, wtdepannmin, 
+                hzdep)
+# Based on Figure S1, a few variables were removed due to high collinearity
+unique_ivs <- unique_ivs%>%
+  dplyr::select(-c(sandtotal_r, ksat_r, ph1to1h2o_r, aws0_999))
 # Option 2: use total number of industries 
 # (previously unique_ivs <- unique_ivs[,-c(5,7:9,12,16,19:20,27,30,33)])
 
