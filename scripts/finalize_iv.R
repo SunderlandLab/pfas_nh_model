@@ -110,7 +110,7 @@ unique_ivs$hydgrpdcdC <- as.factor(unique_ivs$hydgrpdcdC)
 #        "ph1to1h2o_r", "aws0_999", "drclassdcdE", "hydgrpdcdB","hydgrpdcdC","hydgrpdcdD") 
 #chu: refactor 09/23/2020, keep variables in the SI
 unique_ivs <- unique_ivs%>%
-  dplyr::select(precip, recharge, contains("Impact"),
+  dplyr::select(StationID, precip, recharge, contains("Impact"),
                 sandtotal_r, silttotal_r, claytotal_r, dbthirdbar_r,
                 ksat_r, awc_r, cec7_r, ph1to1h2o_r, aws0_999,
                 soc0_999, slopegradwta, brockdepmin, wtdepannmin, 
