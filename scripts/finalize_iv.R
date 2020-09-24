@@ -111,13 +111,16 @@ unique_ivs$hydgrpdcdC <- as.factor(unique_ivs$hydgrpdcdC)
 #chu: refactor 09/23/2020, keep variables in the SI
 unique_ivs <- unique_ivs%>%
   dplyr::select(StationID, precip, recharge, contains("Impact"),
+                bedrock_M,hydgrpdcdA,
                 sandtotal_r, silttotal_r, claytotal_r, dbthirdbar_r,
                 ksat_r, awc_r, cec7_r, ph1to1h2o_r, aws0_999,
                 soc0_999, slopegradwta, brockdepmin, wtdepannmin, 
-                hzdep)
-# Based on Figure S1, a few variables were removed due to high collinearity
-unique_ivs <- unique_ivs%>%
-  dplyr::select(-c(sandtotal_r, ksat_r, ph1to1h2o_r, aws0_999))
+                hzdep)%>%
+  # Based on Figure S1, a few variables were removed due to high collinearity
+  dplyr::select(-c(sandtotal_r, ksat_r, ph1to1h2o_r, aws0_999))%>%
+  # the sales volume figures are too large, divide by 1000
+  mutate_at(vars(contains("2")), ~(./1000))
+
 # Option 2: use total number of industries 
 # (previously unique_ivs <- unique_ivs[,-c(5,7:9,12,16,19:20,27,30,33)])
 

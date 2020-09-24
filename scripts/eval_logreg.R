@@ -60,6 +60,21 @@ sens_spec_tables <- map(compounds_logreg, function(clist) {
   return(table(predicted_classes, observed_classes))
 })
 
+sens_spec_tables_alt<- map(compounds_logreg_alt, function(clist) {
+  predicted_classes <- clist[['predicted_classes']]
+  observed_classes <- clist[['test_data']]$final
+  return(table(predicted_classes, observed_classes))
+})
+
+calc_model_performance<-function(sens_spec_table){
+  '''
+  input is a two by two table where observed classes are listed horizontally
+  and predicted classes are listed vertically
+  '''
+  accuracy <- (x[1,1] + x[2,2])/sum(x)
+  
+}
+
 #chu: 09/20/2020, refactor to combine 5 compounds in one table
 # # Extract betas and write to csv -----------------------------------------
 # for (i in 1:length(compounds_logreg)) {
@@ -81,9 +96,23 @@ stargazer2 <- function(model, odd.ratio = F, ...) {
   }
 }
 stargazer2(lapply(compounds_logreg, function(x){x[["model"]]}), 
-           odd.ratio = T, title="Results", align=TRUE, type="text")
+           odd.ratio = T, title="Industry impact calculated using sales volume",
+           align=TRUE, type="text",
+           column.labels=c("PFOA","PFHxA","PFPeA","PFHpA","PFOS"),
+           model.numbers=FALSE, keep.stat=c("n","aic"),
+           dep.var.labels.include = FALSE, dep.var.caption="",
+           star.char = c("*", "**", "***"),
+           star.cutoffs = c(.05, .01, .001),
+           out="../../logmodel_092320.html")
 stargazer2(lapply(compounds_logreg_alt, function(x){x[["model"]]}), 
-           odd.ratio = T, title="Results", align=TRUE, type="text")
+           odd.ratio = T, title="Industry impact calculated using counts",
+           align=TRUE, type="text",
+           column.labels=c("PFOA","PFHxA","PFPeA","PFHpA","PFOS"),
+           model.numbers=FALSE, keep.stat=c("n","aic"),
+           dep.var.labels.include = FALSE, dep.var.caption="",
+           star.char = c("*", "**", "***"),
+           star.cutoffs = c(.05, .01, .001),
+           out="../../logmodel_alt_092320.html")
 
 
 # # Check for influential values --------------------------------------------
@@ -116,5 +145,5 @@ stargazer2(lapply(compounds_logreg_alt, function(x){x[["model"]]}),
 
 # Save --------------------------------------------------------------------
 
-saveRDS(eval_models, '../../models_logreg_eval/eval_models.rds')
-saveRDS(sens_spec_tables, '../../models_logreg_eval/sens_spec_tables.rds')
+# saveRDS(eval_models, '../../models_logreg_eval/eval_models.rds')
+# saveRDS(sens_spec_tables, '../../models_logreg_eval/sens_spec_tables.rds')
