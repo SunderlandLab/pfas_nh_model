@@ -32,7 +32,7 @@ stargazer(compounds_logreg[["PFOA"]]$model,compounds_logreg[["PFHXA"]]$model,com
                              "Available Water Capacity","Slope","Cation Exchange Capacity","Soil Organic Carbon","Depth to Bedrock","Water Table Depth: Annual Minimum","Horizon Thickness","Bedrock: Merrimack","Hydrologic Group: B","Drainage Class: Wet",
                              "Drainage Class: Poor","Hydrologic Group: C"),
           column.labels=c("PFOA","PFHxA","PFPeA","PFHpA","PFOS"),dep.var.labels.include = FALSE, dep.var.caption="",
-          model.numbers=FALSE,keep.stat=c("n","aic"),out="logmodel_032619.html")
+          model.numbers=FALSE,keep.stat=c("n","aic"),out="../../logmodel_032619.html")
 
 mean(compounds_logreg[["PFOA"]]$predicted_classes==compounds_logreg[["PFOA"]]$test_data$final)
 mean(compounds_logreg[["PFHXA"]]$predicted_classes==compounds_logreg[["PFHXA"]]$test_data$final)

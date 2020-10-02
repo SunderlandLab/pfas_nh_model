@@ -66,15 +66,24 @@ sens_spec_tables_alt<- map(compounds_logreg_alt, function(clist) {
   return(table(predicted_classes, observed_classes))
 })
 
-calc_model_performance<-function(sens_spec_table){
-  '''
-  input is a two by two table where observed classes are listed horizontally
-  and predicted classes are listed vertically
-  '''
-  accuracy <- (x[1,1] + x[2,2])/sum(x)
+calc_model_performance<-function(x) {
   
+  #input is a two by two table where observed classes are listed horizontally
+  #and predicted classes are listed vertically
+  
+  accuracy <- (x[1,1] + x[2,2])/sum(x)
+  spec <- x[1,1]/(x[1,1] + x[2,1])
+  sens <- x[2,2]/(x[2,2] + x[1,2])
+  
+  return(list(accuracy = accuracy,
+              spec = spec,
+              sens = sens))
 }
 
+map_df(sens_spec_tables, calc_model_performance, .id = "compound")%>%
+  write_csv("../../sens_spec_logreg_09232020.csv")
+map_df(sens_spec_tables_alt, calc_model_performance, .id = "compound")%>%
+  write_csv("../../sens_spec_alt_logreg_09232020.csv")
 #chu: 09/20/2020, refactor to combine 5 compounds in one table
 # # Extract betas and write to csv -----------------------------------------
 # for (i in 1:length(compounds_logreg)) {
