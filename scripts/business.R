@@ -50,6 +50,8 @@ TCI_data <- TCI_data[,-2]
 
 new_finalind <- setNames(data.frame(matrix(ncol = 3, nrow = 0)), 
                          c("StationID","NAICS", "SALESVOL"))
+#new_finalind <- setNames(data.frame(matrix(ncol = 4, nrow = 0)), 
+# c("StationID","CONAME","NAICS", "SALESVOL"))
 for(i in 1:nrow(proj_wells)) {
   #tryCatch skips over any weird things that throw an error with the intersect function
   tryCatch({
@@ -62,7 +64,7 @@ for(i in 1:nrow(proj_wells)) {
     len <- length(biz_subset)
     y <- proj_wells[i,]
     x <- y[rep(seq_len(1), each = len),]
-    # Calculate distance between well and point source, unit is meter
+    # Calculate distance between well and point source
     biz_distances <- pointDistance(proj_wells[i,], biz_subset, lonlat = FALSE)
     biz_subset$distances <- biz_distances
     biz_subset <- as.data.frame(biz_subset)
@@ -75,12 +77,9 @@ for(i in 1:nrow(proj_wells)) {
 
 # Merge -------------------------------------------------------------------
 
+#new_finalind <- rbind(new_finalind, TCI_data, SG_data)
 new_finalind <- rbind(new_finalind[,-2], TCI_data, SG_data)
-
-
+sapply(new_finalind, function(x){sum(is.na(x))})
 # Save --------------------------------------------------------------------
 
 saveRDS(new_finalind, '../../modeling_data/new_finalind.rds')
-
-
-

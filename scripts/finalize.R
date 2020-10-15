@@ -5,8 +5,8 @@ library(tidyverse)
 
 # Load --------------------------------------------------------------------
 
-merged_variables <- readRDS('../../modeling_data/merged_variables.rds')
-unique_ivs <- readRDS('../../modeling_data/unique_ivs.rds')
+merged_variables <- readRDS('../../modeling_data/merged_variables1207.rds')
+unique_ivs <- readRDS('../../modeling_data/unique_ivs1207.rds')
 
 
 # Generate separate dataframe for each compound ---------------------------
@@ -26,7 +26,15 @@ for (i in 1:length(compounds_data)) {
   compounds_data[[i]] <- df_final
 }
 
+#check for quasi-completeness
+lapply(compounds_data, function(x){
+  table(x[['final']], x[['bedrock_M']])
+})
+lapply(compounds_data, function(x){
+  table(x[['final']], x[['hydgrpdcdA']])
+})
+#looks good
+
 # Save --------------------------------------------------------------------
 
-saveRDS(compounds_data, '../../modeling_data/compounds_data.rds')
-
+saveRDS(compounds_data, '../../modeling_data/compounds_data1207.rds')

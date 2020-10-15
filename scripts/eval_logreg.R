@@ -6,9 +6,8 @@ library(broom)
 library(stargazer)
 # Load --------------------------------------------------------------------
 
-compounds_data <- readRDS('../../modeling_data/compounds_data.rds')
-compounds_logreg <- readRDS('../../models/compounds_logreg.rds')
-compounds_logreg_alt <- readRDS('../../models/compounds_logreg_alt.rds')
+compounds_data <- readRDS('../../modeling_data/compounds_data1207.rds')
+compounds_logreg_alt <- readRDS('../../models/compounds_logreg_alt1207.rds')
 
 # Evaluate models ---------------------------------------------------------
 
@@ -31,34 +30,29 @@ compounds_logreg_alt <- readRDS('../../models/compounds_logreg_alt.rds')
 #                      "drclassdcdW", "drclassdcdP","hydgrpdcdB"))
 
 # Calculate prediction probabilities and AIC for models with a single IV removed
-eval_models <- list()
-for (i in 1:length(compounds_logreg)) {
-  clist <- compounds_logreg[[i]]
-  ivs <- clist$model$coefficients[-1]%>%
-    names()%>% #-1 because the first coef is intercept
-    gsub("1$", "", .)#some variable has 1 at the end of the variable name, drop the 1
-
-  probs = aics <- rep(0, length(ivs))
-  for (j in 1:length(ivs)) {
-    form <- paste("final ~", paste(ivs[-j], collapse = " + ")) %>% as.formula
-    model <- glm(form, data = clist[['train_data']], family = binomial)
-    probabilities <- model %>% predict(clist[['test_data']], type = "response")
-    predicted_classes <- ifelse(probabilities > 0.5, 1, 0)
-    probs[j] <- mean(predicted_classes == clist[['test_data']]$final)
-    aics[j] <- AIC(model)
-  }
-  df <- data.frame(ivs = ivs, aics, probs)
-  eval_models[[names(compounds_logreg)[i]]] <- df[order(-df$aics),]
-}
+# eval_models <- list()
+# for (i in 1:length(compounds_logreg)) {
+#   clist <- compounds_logreg[[i]]
+#   ivs <- clist$model$coefficients[-1]%>%
+#     names()%>% #-1 because the first coef is intercept
+#     gsub("1$", "", .)#some variable has 1 at the end of the variable name, drop the 1
+# 
+#   probs = aics <- rep(0, length(ivs))
+#   for (j in 1:length(ivs)) {
+#     form <- paste("final ~", paste(ivs[-j], collapse = " + ")) %>% as.formula
+#     model <- glm(form, data = clist[['train_data']], family = binomial)
+#     probabilities <- model %>% predict(clist[['test_data']], type = "response")
+#     predicted_classes <- ifelse(probabilities > 0.5, 1, 0)
+#     probs[j] <- mean(predicted_classes == clist[['test_data']]$final)
+#     aics[j] <- AIC(model)
+#   }
+#   df <- data.frame(ivs = ivs, aics, probs)
+#   eval_models[[names(compounds_logreg)[i]]] <- df[order(-df$aics),]
+# }
 
 
 # Sensitivity and specificity analysis ------------------------------------
 
-sens_spec_tables <- map(compounds_logreg, function(clist) {
-  predicted_classes <- clist[['predicted_classes']]
-  observed_classes <- clist[['test_data']]$final
-  return(table(predicted_classes, observed_classes))
-})
 
 sens_spec_tables_alt<- map(compounds_logreg_alt, function(clist) {
   predicted_classes <- clist[['predicted_classes']]
@@ -80,10 +74,9 @@ calc_model_performance<-function(x) {
               sens = sens))
 }
 
-map_df(sens_spec_tables, calc_model_performance, .id = "compound")%>%
-  write_csv("../../sens_spec_logreg_09232020.csv")
+
 map_df(sens_spec_tables_alt, calc_model_performance, .id = "compound")%>%
-  write_csv("../../sens_spec_alt_logreg_09232020.csv")
+  write_csv("../../output/sens_spec_alt_logreg_10082020.csv")
 #chu: 09/20/2020, refactor to combine 5 compounds in one table
 # # Extract betas and write to csv -----------------------------------------
 # for (i in 1:length(compounds_logreg)) {
@@ -104,24 +97,24 @@ stargazer2 <- function(model, odd.ratio = F, ...) {
     stargazer(model, ...)
   }
 }
-stargazer2(lapply(compounds_logreg, function(x){x[["model"]]}), 
-           odd.ratio = T, title="Industry impact calculated using sales volume",
-           align=TRUE, type="text",
-           column.labels=c("PFOA","PFHxA","PFPeA","PFHpA","PFOS"),
-           model.numbers=FALSE, keep.stat=c("n","aic"),
-           dep.var.labels.include = FALSE, dep.var.caption="",
-           star.char = c("*", "**", "***"),
-           star.cutoffs = c(.05, .01, .001),
-           out="../../logmodel_092320.html")
+
+
+
+# Impact characterized as the count of industry with exponential decay
+c_stat_ls<-sapply(compounds_logreg_alt, 
+                  function(x){DescTools::Cstat(x[["model"]])%>%
+                      round(3)})
 stargazer2(lapply(compounds_logreg_alt, function(x){x[["model"]]}), 
            odd.ratio = T, title="Industry impact calculated using counts",
            align=TRUE, type="text",
            column.labels=c("PFOA","PFHxA","PFPeA","PFHpA","PFOS"),
            model.numbers=FALSE, keep.stat=c("n","aic"),
+           add.lines = list(c("C-Statistics", c_stat_ls)),
            dep.var.labels.include = FALSE, dep.var.caption="",
            star.char = c("*", "**", "***"),
            star.cutoffs = c(.05, .01, .001),
-           out="../../logmodel_alt_092320.html")
+           out="../../output/logmodel_alt_100820.html")
+
 
 
 # # Check for influential values --------------------------------------------

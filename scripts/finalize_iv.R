@@ -6,18 +6,17 @@ library(tidyverse)
 # Load --------------------------------------------------------------------
 # Raw datasets
 bedrock <- read.csv("../../raw_data/bedrock_extraction.csv", header = TRUE, sep = ",", na.strings = c("", " ", "NA"))
-recharge <- read.csv("../../raw_data/recharge.csv", header = TRUE, sep = ",", na.strings = c("", " ", "NA"))
 precip <- read.csv("../../raw_data/precip_PFAS.csv", header = TRUE, sep = ",", na.strings = c("", " ", "NA"))
-recharge <- read.csv("../../raw_data/recharge.csv", header = TRUE, sep = ",", na.strings = c("", " ", "NA"))
+recharge <- read.csv("../../raw_data/recharge1122.csv", header = TRUE, sep = ",", na.strings = c("", " ", "NA"))
 # Processed RDS's
-final_industries <- readRDS('../../modeling_data/final_industries.rds')
-final_soildata <- readRDS('../../modeling_data/final_soildata.rds')
+final_industries <- readRDS('../../modeling_data/final_industries1119.rds')
+final_soildata <- readRDS('../../modeling_data/final_soildata1227.rds')
 PFASwells <- readRDS('../../modeling_data/PFASwells.rds')
 
 # Remove duplicates and aggregate -----------------------------------------
 
 unique_bedrock <- unique(bedrock)
-unique_recharge <- unique(recharge)
+unique_recharge <- unique(recharge[,-1])
 
 agg_precip <- aggregate(precip$Precip, by = list(StationID = precip$StationID), FUN = mean)
 colnames(agg_precip)[colnames(agg_precip) == "x"] <- "precip"
@@ -37,16 +36,36 @@ indvars <- merged_variables[,c(1,12:length(merged_variables))]
 unique_ivs <- unique(indvars)
 
 
-# Clean NA’s & blanks -----------------------------------------------------
-# (For auantitative variables only)
+# Clean NA's & blanks -----------------------------------------------------
+# (For quantitative variables only)
 # Replace each variable's NAs & 0's with the mean for that variable
 
-for (var in 2:(ncol(unique_ivs) - 3)) {
-  avg <- mean(unique_ivs[,var], na.rm = TRUE)
-  unique_ivs[is.na(unique_ivs[, var]), var] <- avg
-  unique_ivs[unique_ivs[,var] == 0, var] <- avg
+# for (var in 2:(ncol(unique_ivs) - 3)) {
+#   avg <- mean(unique_ivs[,var], na.rm = TRUE)
+#   unique_ivs[is.na(unique_ivs[, var]), var] <- avg
+#   unique_ivs[unique_ivs[,var] == 0, var] <- avg
+# }
+
+#replacing with column mean
+#where var is iterating through the precip, recharge, and soil columns
+#soil properties, impute missing as column average
+for (var in c(2:3,16:29)) {
+  if (var <= 3)
+  {
+    avg <- mean(unique_ivs[,var], na.rm = TRUE)
+    unique_ivs[is.na(unique_ivs[, var]), var] <- avg
+  }
+  else
+  {
+    avg <- mean(unique_ivs[!unique_ivs[,var] %in% c(0,NA), var])
+    unique_ivs[unique_ivs[,var] %in% c(0,NA), var] <- avg
+  }
 }
 
+#impact from industry, impute missing as zero
+for(var in c(4:15)) {
+  unique_ivs[is.na(unique_ivs[,var]), var] <- 0
+}
 # Condense number of categories for categorical variables -----------------
 
 unique_ivs$hydgrpdcd[unique_ivs$hydgrpdcd == "A/D"] <- "D"
@@ -60,6 +79,15 @@ unique_ivs$drclassdcd[unique_ivs$drclassdcd == "Very poorly drained"] <- "Poorly
 # Recode as binary indicators ---------------------------------------------
 # Bedrock
 unique_ivs$bedrock <- as.character(unique_ivs$bedrock)
+#replacing NAs for categorical variables with most common category
+unique_ivs[is.na(unique_ivs$bedrock),"bedrock"] <- "Zmz"
+#only 19 NAs for each of these, but also random rows with not just NAs but missing values entirely ("")...assuming those are essentially NAs
+#there are 92 of these for drclassdcd, and 100 for hydgrpdcd
+unique_ivs[is.na(unique_ivs$drclassdcd),"drclassdcd"] <- "Excessively drained"
+unique_ivs[unique_ivs$drclassdcd=="","drclassdcd"]<- "Excessively drained"
+unique_ivs[is.na(unique_ivs$hydgrpdcd),"hydgrpdcd"] <- "A"
+unique_ivs[unique_ivs$hydgrpdcd=="","hydgrpdcd"] <- "A"
+
 unique_ivs$bedrock <- 
   ifelse(unique_ivs$bedrock %in% c("OZrb","SOb","SObc","SObg","SOe","SOec","SOk","Zmz"),
          1, 0)
@@ -93,6 +121,7 @@ unique_ivs$drclassdcd = unique_ivs$hydgrpdcd = unique_ivs$bedrock <- NULL
 
 # Coerce into factor 
 unique_ivs$bedrock_M <- as.factor(unique_ivs$bedrock_M)
+unique_ivs$drclassdcdE <- as.factor(unique_ivs$drclassdcdE)
 unique_ivs$drclassdcdW <- as.factor(unique_ivs$drclassdcdW)
 unique_ivs$drclassdcdP <- as.factor(unique_ivs$drclassdcdP)
 unique_ivs$hydgrpdcdA <- as.factor(unique_ivs$hydgrpdcdA)
@@ -101,25 +130,14 @@ unique_ivs$hydgrpdcdC <- as.factor(unique_ivs$hydgrpdcdC)
 
 
 
-
 # Remove unnecessary columns ----------------------------------------------
 # Option 1:
 # (previously unique_ivs <- unique_ivs[,-c(10,12:14,17,21,24:25,32,35,38)])
-# rm <- c("sandtotal_r", "sandco_r", "sandmed_r", "sandfine_r", "siltco_r", "ksat_r", 
-#         "siltco_r",    "siltfine_r",
-#        "ph1to1h2o_r", "aws0_999", "drclassdcdE", "hydgrpdcdB","hydgrpdcdC","hydgrpdcdD") 
-#chu: refactor 09/23/2020, keep variables in the SI
-unique_ivs <- unique_ivs%>%
-  dplyr::select(StationID, precip, recharge, contains("Impact"),
-                bedrock_M,hydgrpdcdA,
-                sandtotal_r, silttotal_r, claytotal_r, dbthirdbar_r,
-                ksat_r, awc_r, cec7_r, ph1to1h2o_r, aws0_999,
-                soc0_999, slopegradwta, brockdepmin, wtdepannmin, 
-                hzdep)%>%
-  # Based on Figure S1, a few variables were removed due to high collinearity
-  dplyr::select(-c(sandtotal_r, ksat_r, ph1to1h2o_r, aws0_999))%>%
-  # the sales volume figures are too large, divide by 1000
-  mutate_at(vars(contains("2")), ~(./1000))
+#rm <- c("sandtotal_r", "sandco_r", "sandmed_r", "sandfine_r", "siltco_r", "ksat_r", 
+#"ph1to1h2o_r", "aws0_999", "drclassdcdE", "hydgrpdcdA","hydgrpdcdD") 
+rm <- c("sandtotal_r", "sandco_r", "sandmed_r", "sandfine_r", "siltco_r", "ksat_r", 
+        "ph1to1h2o_r", "aws0_999", "drclassdcdW","drclassdcdP","drclassdcdE", "hydgrpdcdB","hydgrpdcdC","hydgrpdcdD") 
+unique_ivs <- unique_ivs[, -which(names(unique_ivs) %in% rm)] 
 
 # Option 2: use total number of industries 
 # (previously unique_ivs <- unique_ivs[,-c(5,7:9,12,16,19:20,27,30,33)])
@@ -130,7 +148,5 @@ unique_ivs <- unique_ivs%>%
 
 # Save --------------------------------------------------------------------
 
-saveRDS(merged_variables, '../../modeling_data/merged_variables.rds')
-saveRDS(unique_ivs, '../../modeling_data/unique_ivs.rds')
-
-
+saveRDS(merged_variables, '../../modeling_data/merged_variables1207.rds')
+saveRDS(unique_ivs, '../../modeling_data/unique_ivs1207.rds')

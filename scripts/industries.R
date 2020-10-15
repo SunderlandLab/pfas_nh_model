@@ -10,8 +10,8 @@ new_finalind <- readRDS('../../modeling_data/new_finalind.rds')
 
 # Clean and coerce types --------------------------------------------------
 
-industries1 <- new_finalind[!duplicated(new_finalind),]
-industries1$NAICS <- as.numeric(levels(industries1$NAICS))[industries1$NAICS]
+industries1 <- new_finalind%>%
+  distinct()
 industries1$NAICSabbv <- substr(as.character(industries1$NAICS), 0, 3)
 industries1$NAICSabbv <- as.numeric(industries1$NAICSabbv)
 
@@ -44,7 +44,8 @@ convert <- function(number){
 }
 
 industries1$NAICSgroups <- sapply(industries1$NAICSabbv, convert)
-
+#recoding 0 sales volume as 1 
+industries1[industries1$SALESVOL==0,"SALESVOL"] <- 1
 
 # Define impact -----------------------------------------------------------
 
@@ -55,7 +56,9 @@ industries1$impactDxS <- industries1$impactD*industries1$SALESVOL
 # 1. Define by number of types of industries by category
 # industries_agg <- aggregate(.~StationID+NAICSgroups, industries1, FUN = length)
 # 2. Define by distance (default)
-industries_agg <- aggregate(.~StationID+NAICSgroups, industries1, FUN = sum)
+industries_agg <- industries1 %>%
+  dplyr::select(-c("NAICS", "NAICSabbv"))%>%
+  aggregate(.~StationID+NAICSgroups, ., FUN = sum)
 
 
 # Recode impact -----------------------------------------------------------
@@ -66,7 +69,7 @@ ind2 <- paste0('Impact', codes, '2') # impact as 1/e^d*sales volume
 ind3 <- paste0('Impact', codes, '3') # impact as 1/e^d
 
 for (i in 1:length(codes)) {
-  industries_agg[[ind[i]]] <- ifelse(industries_agg$NAICSgroups == codes[i], 1, 0)
+  industries_agg[[ind[i]]] <- ifelse(industries_agg$NAICSgroups == codes[i], 1, 0) #changed it to NA from 0
 }
 
 for (i in 1:length(ind)) {
@@ -82,11 +85,11 @@ for (i in 1:length(ind)) {
 # Aggregate
 final_industries <- aggregate(.~StationID, 
                               industries_agg[, c('StationID', ind2, ind3)], 
-                              FUN = sum)
+                              FUN = sum, na.rm = T)
 
 # Rename columns
 colnames(final_industries)[-1] <- c(ind2, ind3)
-
+sapply(final_industries, function(x){sum(is.na(x))})
 # Save --------------------------------------------------------------------
 
-saveRDS(final_industries, '../../modeling_data/final_industries.rds')
+saveRDS(final_industries, '../../modeling_data/final_industries1119.rds')
