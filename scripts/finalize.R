@@ -2,6 +2,10 @@
 # Library -----------------------------------------------------------------
 
 library(tidyverse)
+library(kableExtra)
+library(pacman)
+library(flextable)
+p_load("docxtools")
 
 # Load --------------------------------------------------------------------
 
@@ -38,3 +42,146 @@ lapply(compounds_data, function(x){
 # Save --------------------------------------------------------------------
 
 saveRDS(compounds_data, '../../modeling_data/compounds_data1207.rds')
+
+
+# Table 1
+compounds_data <- readRDS('../../modeling_data/compounds_data1207.rds')
+
+compounds_data_addflag<- map(compounds_data, function(data) {
+  set.seed(99)
+  #set.seed(123)
+  # drop station ID, final, and impact2 (sales volume)
+  data<-data %>%
+    dplyr::select(-c(StationID, final, matches("2$")))
+  # Divide into training and test sets, 70-30%
+  p <- sample(nrow(data),floor(0.7*nrow(data)))
+  #p <- data$final %>% createDataPartition(p = 0.7, list = F)
+  train_data <- data[p, ]
+  test_data <- data[-p, ]
+  data <- bind_rows(training = train_data, testing = test_data, .id = "dataset")
+  
+  return(data)
+})
+
+table1_df<-bind_rows(!!!compounds_data_addflag, .id = "compound") %>%
+  mutate(DL = case_when(compound == "PFOA" ~ 2, # uniform detection limit (ng/L)
+                        compound == "PFHXA" ~ 4.5,
+                        compound == "PFHPA" ~ 2,
+                        compound == "PFPEA" ~ 4.5,
+                        compound == "PFOS" ~ 4,
+                        TRUE ~ NA_real_),
+         compound = case_when(compound == "PFHXA" ~ "PFHxA",
+                              compound == "PFHPA" ~ "PFHpA",
+                              compound == "PFPEA" ~ "PFPeA",
+                              TRUE ~ compound)) 
+
+table1_master<-table1_df %>%
+  select(-c(bedrock_M, hydgrpdcdA)) %>%
+  pivot_longer(-c("compound", "dataset", "DL")) %>%
+  group_by(compound, dataset, name) %>%
+  summarise(N = n(),
+            DL = min(DL),
+            pct_detect = sum(value>DL)/N *100,
+            q1= quantile(value, 0.25),
+            median = quantile(value, 0.5),
+            q3 = quantile(value, 0.75),
+            p98 = quantile(value, 0.98),
+            max = max(value)) %>%
+  ungroup() %>%
+  mutate(compound = factor(compound, levels = c("PFPeA", "PFHxA", "PFHpA", "PFOA", "PFOS")),
+         dataset = factor(dataset, levels = c("training", "testing"))) %>%
+  arrange(compound, name, dataset)
+
+
+table1_master %>% 
+  #format_engr(., sigdig = 3) %>%
+  filter(name == "reg") %>%
+  select(-name) %>%
+  flextable() %>%
+  colformat_num(j = 5, digits = 1) %>%
+  colformat_num(j = c(6,7,8,9,10), digits = 2) %>%
+  merge_v(j = c("compound")) %>%
+  add_header_lines(values = "PFAS concentrations (ng/L)") %>%
+  theme_booktabs() %>%
+  save_as_docx(path = "../../output/Table1_pfas_conc.docx")
+
+
+level_key <- c("ImpactPl3" = "Industry: Plastics and rubber", 
+               "recharge" = "Hydro: Groundwater recharge",
+               "precip" = "Hydro: Monthly precipitation",
+               "ImpactT3" = "Industry: Textiles manufacturing",
+               "silttotal_r" = "Soil: Percent total silt",
+               "cec7_r" = "Soil: Cation exchange capacity",
+               "claytotal_r" = "Soil: Percent total clay",
+               "slopegradwta" = "Hydro: Slope gradient",
+               "ImpactPr3" = "Industry: Printing industry",
+               "soc0_999" = "Soil: Organic carbon",
+               "dbthirdbar_r" = "Soil: Bulk density",
+               "awc_r" = "Soil: Available water capacity",
+               "ImpactOI3" = "Industry: Other",
+               "ImpactAW3" = "Industry: Airport and waste management",
+               "hzdep" = "Soil: Thickness of soil horizon",
+               "bedrock_M" = "Geo: Bedrock type",
+               "hydgrpdcdA" = "Hydro: Low runoff potential",
+               "ImpactS3" = "Industry: Semiconductor manufacturing",
+               "wtdepannmin" = "Hydro: Depth to water table",
+               "brockdepmin" = "Geo: Depth to bedrock")
+
+options(pillar.sigfig = 3)
+table1_df %>%
+  select(-c(bedrock_M, hydgrpdcdA)) %>%
+  pivot_longer(-c("compound", "dataset", "DL")) %>%
+  group_by(compound, name) %>%
+  summarise(N = n(),
+            DL = min(DL),
+            pct_detect = sum(value>DL)/N *100,
+            q1= quantile(value, 0.25),
+            median = quantile(value, 0.5),
+            q3 = quantile(value, 0.75),
+            p98 = quantile(value, 0.98),
+            max = max(value)) %>%
+  ungroup() %>%
+  mutate(compound = factor(compound, levels = c("PFPeA", "PFHxA", "PFHpA", "PFOA", "PFOS"))) %>%
+  arrange(compound, name) %>%
+  mutate(name = recode(name, !!!level_key)) %>%
+  #format_engr(., sigdig = 3) %>%
+  filter(compound == "PFOA" & name != "reg") %>%
+  select(name, everything(.)) %>%
+  select(-c(compound, DL, pct_detect)) %>%
+  separate(name, c("group", "variable"), sep = ":")%>%
+  arrange(group, variable) %>%
+  flextable() %>%
+  colformat_num(j = -c(1,2,3), digits = 2) %>%
+  colformat_num(j = 4, digits = 0) %>%
+  merge_v(j = c("group", "variable")) %>%
+  add_header_lines(values = "Continuous independent variables") %>%
+  theme_booktabs() %>%
+  save_as_docx(path = "../../output/Table1_continuous_var_combined.docx")
+
+
+table1_cat<-table1_df %>%
+  select(c(compound, bedrock_M, hydgrpdcdA)) %>%
+  pivot_longer(-c("compound")) %>%
+  group_by(compound, name) %>%
+  summarise(N = n(),
+            N1 = sum(value == 1),
+            pct_1 = N1/N * 100,
+            N0 = sum(value == 0),
+            pct_0 = N0/N * 100) %>%
+  ungroup() %>%
+  mutate(compound = factor(compound, levels = c("PFPeA", "PFHxA", "PFHpA", "PFOA", "PFOS"))) %>%
+  arrange(compound, name)
+
+table1_cat %>%
+  mutate(name = recode(name, !!!level_key)) %>%
+  #format_engr(., sigdig = 3) %>%
+  select(name, everything(.)) %>%
+  separate(name, c("group", "variable"), sep = ":")%>%
+  arrange(group, variable, compound) %>%
+  flextable() %>%
+  colformat_num(j = c(3), digits = 1) %>%
+  merge_v(j = c("group", "variable", "compound")) %>%
+  add_header_lines(values = "Categorical independent variables") %>%
+  theme_booktabs() %>%
+  save_as_docx(path = "../../output/Table1_categorical_var_combined.docx")
+

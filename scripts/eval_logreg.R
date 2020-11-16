@@ -113,7 +113,7 @@ stargazer2(lapply(compounds_logreg_alt, function(x){x[["model"]]}),
            dep.var.labels.include = FALSE, dep.var.caption="",
            star.char = c("*", "**", "***"),
            star.cutoffs = c(.05, .01, .001),
-           out="../../output/logmodel_alt_100820.html")
+           out="../../output/logmodel_alt_100820.txt")
 
 
 

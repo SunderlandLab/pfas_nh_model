@@ -128,10 +128,11 @@ var_imp_df%>%
   separate(variable, into = c("group", "varname"), sep = ":") %>%
   mutate(varname = trimws(varname))%>%
   pivot_longer(-c(varname, group)) %>%
+  mutate(name = factor(name, levels = c("PFPeA", "PFHxA", "PFHpA", "PFOA", "PFOS")))%>%
   ggplot(aes(x= reorder(varname, value), 
              y=value, fill = value)) +
   geom_bar(stat = "identity", color = "grey50") +
-  scale_fill_viridis() +
+  scale_fill_viridis(guide = guide_colorbar(frame.colour = "grey50", frame.linewidth = 2)) +
   coord_flip() +
   facet_grid(group ~ name, scales = "free_y", space = "free") +
   xlab("")+
@@ -144,8 +145,10 @@ var_imp_df%>%
         legend.title = element_blank(),
         legend.key.size = unit(1, "cm"),
         legend.text = element_text(size = 16),
-        legend.position="top")
-ggsave("../../output/Figure2_rf_class_var_imp.png")
+        legend.position="bottom")
+ggsave("../../output/Figure2_rf_class_var_imp.png",width = 9,
+  height = 9,
+  units = "in")
 
 ##########################
 #Option 2 facet_wrap 1D  #
