@@ -5,6 +5,7 @@ Predictive model for PFAS levels in private wells in NH
 ## Authors
 * Xindi C. Hu
 * Beverly Ge
+* Bridger Ruyle
 * Elsie M. Sunderland
 
 ##  Order and purpose of scripts (output given in parentheses)
@@ -17,9 +18,8 @@ All can be found in the /scripts folder
 - soildata.R   : process soil data 
 							 	 (modeling_data/final_soildata.rds)
 - business.R   : business extraction 
-							 	 (modeling_data/new_finalind.rds)
-- industries.R : quantify and aggregate industries 
-								 (modeling_data/final_industries.rds)
+							 	 (modeling_data/final_industries.rds)
+(- industries.R : quantify and aggregate industries, replaced by impact.py)
 (- precip.R    : use precip_PFAS.csv)
 - finalize_iv.R: merge all independent variables into single dataset
                  (modeling_data/merged_variables.rds, modeling_data/unique_ivs.rds)  
