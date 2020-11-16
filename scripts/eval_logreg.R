@@ -6,8 +6,8 @@ library(broom)
 library(stargazer)
 # Load --------------------------------------------------------------------
 
-compounds_data <- readRDS('../../modeling_data/compounds_data1207.rds')
-compounds_logreg_alt <- readRDS('../../models/compounds_logreg_alt1207.rds')
+compounds_data <- readRDS('../../modeling_data/compounds_data11162020.rds')
+compounds_logreg_alt <- readRDS('../../models/compounds_logreg_alt11162020.rds')
 
 # Evaluate models ---------------------------------------------------------
 
@@ -76,7 +76,7 @@ calc_model_performance<-function(x) {
 
 
 map_df(sens_spec_tables_alt, calc_model_performance, .id = "compound")%>%
-  write_csv("../../output/sens_spec_alt_logreg_10082020.csv")
+  write_csv("../../output/sens_spec_alt_logreg_11162020.csv")
 #chu: 09/20/2020, refactor to combine 5 compounds in one table
 # # Extract betas and write to csv -----------------------------------------
 # for (i in 1:length(compounds_logreg)) {
@@ -113,7 +113,7 @@ stargazer2(lapply(compounds_logreg_alt, function(x){x[["model"]]}),
            dep.var.labels.include = FALSE, dep.var.caption="",
            star.char = c("*", "**", "***"),
            star.cutoffs = c(.05, .01, .001),
-           out="../../output/logmodel_alt_100820.txt")
+           out="../../output/logmodel_alt_11162020.txt")
 
 
 

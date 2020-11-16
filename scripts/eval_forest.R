@@ -13,8 +13,8 @@ library(ggthemes)
 options(scipen=999)
 # Load --------------------------------------------------------------------
 
-compounds_forest <- readRDS('../../models/compounds_forest1207.rds')
-compounds_data <- readRDS('../../modeling_data/compounds_data1207.rds')
+compounds_forest <- readRDS('../../models/compounds_forest11162020.rds')
+compounds_data <- readRDS('../../modeling_data/compounds_data11162020.rds')
 
 
 
@@ -83,8 +83,8 @@ sens_spec_tablesf <- map(compounds_forest, function(clist) {
   return(table(predicted_classes, observed_classes))
 })
 
-#map_df(sens_spec_tablesf, calc_model_performance, .id = "compound")%>%
-#  write_csv("../../output/sens_spec_alt_rf_10082020.csv")
+map_df(sens_spec_tablesf, calc_model_performance, .id = "compound")%>%
+ write_csv("../../output/sens_spec_alt_rf_11162020.csv")
 
 
 # Variable Importance Plots
@@ -98,25 +98,25 @@ var_imp_df <- var_imp_df%>%
   mutate(PFHxA = PFHXA,
          PFPeA = PFPEA,
          PFHpA = PFHPA) %>%
-  select(-c(PFHXA, PFPEA, PFHPA))
-level_key <- c("ImpactPl3" = "Industry: Plastics and rubber", 
+  dplyr::select(-c(PFHXA, PFPEA, PFHPA))
+level_key <- c("ImpactPl" = "Industry: Plastics and rubber", 
                "recharge" = "Hydro: Groundwater recharge",
                "precip" = "Hydro: Monthly precipitation",
-               "ImpactT3" = "Industry: Textiles manufacturing",
+               "ImpactT" = "Industry: Textiles manufacturing",
                "silttotal_r" = "Soil: Percent total silt",
                "cec7_r" = "Soil: Cation exchange capacity",
                "claytotal_r" = "Soil: Percent total clay",
                "slopegradwta" = "Hydro: Slope gradient",
-               "ImpactPr3" = "Industry: Printing industry",
+               "ImpactPr" = "Industry: Printing industry",
                "soc0_999" = "Soil: Organic carbon",
                "dbthirdbar_r" = "Soil: Bulk density",
                "awc_r" = "Soil: Available water capacity",
-               "ImpactOI3" = "Industry: Other",
-               "ImpactAW3" = "Industry: Airport and waste management",
+               "ImpactOI" = "Industry: Other",
+               "ImpactAW" = "Industry: Airport and waste management",
                "hzdep" = "Soil: Thickness of soil horizon",
                "bedrock_M" = "Geo: Bedrock type",
                "hydgrpdcdA" = "Hydro: Low runoff potential",
-               "ImpactS3" = "Industry: Semiconductor manufacturing",
+               "ImpactS" = "Industry: Semiconductor manufacturing",
                "wtdepannmin" = "Hydro: Depth to water table",
                "brockdepmin" = "Geo: Depth to bedrock")
 
@@ -143,7 +143,7 @@ var_imp_df%>%
         axis.text.x = element_text(size = 16, angle = 45, hjust = 1),
         axis.text.y = element_text(size = 16),
         legend.title = element_blank(),
-        legend.key.size = unit(1, "cm"),
+        legend.key.size = unit(1.5, "cm"),
         legend.text = element_text(size = 16),
         legend.position="bottom")
 ggsave("../../output/Figure2_rf_class_var_imp.png",width = 9,
@@ -190,7 +190,7 @@ df_pfoa$predicted <- predict_pfoa
 unique <- read.csv("../../raw_data/actual_unique.csv", header = TRUE, sep = ",")[,-1]
 df_pfoa <- df_pfoa %>%
   left_join(unique, by = "StationID") %>%
-  select(StationID, observed = final, predicted, Longitude, Latitude) %>%
+  dplyr::select(StationID, observed = final, predicted, Longitude, Latitude) %>%
   filter(!is.na(Longitude) & !is.na(Latitude)) %>%
   mutate(Predicted = if_else(predicted == 0, "Non-detect", "Detected"),
          Observed = if_else(observed== 0, "Non-detect", "Detected"))
@@ -209,7 +209,7 @@ m<-tm_shape(nh_map) +
   tm_polygons(border.col = "white") +
   tm_shape(pfoa_sf) +
   tm_bubbles(col = c("Observed","Predicted"), 
-             size = 0.3, border.col = "transparent", 
+             size = 0.2, border.col = "transparent", 
              alpha = 0.7,
              palette = "RdYlGn") + 
   tm_layout(legend.title.size = 1.8,
@@ -258,4 +258,4 @@ m3<-tm_shape(us_map) +
           palette = c("white", "red"),
           legend.show = FALSE) + 
   tm_layout(frame = F)
-tmap_save(m3, "../../output/TOC_PFOA_PFOS.png")
+tmap_save(m3, "../../output/US_map.png")

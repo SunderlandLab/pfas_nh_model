@@ -7,7 +7,7 @@ library(MASS)
 library(InformationValue)
 # Load --------------------------------------------------------------------
 
-compounds_data <- readRDS('../../modeling_data/compounds_data1207.rds')
+compounds_data <- readRDS('../../modeling_data/compounds_data11162020.rds')
 
 
 # Model -------------------------------------------------------------------
@@ -47,4 +47,4 @@ compounds_logreg_alt <- map(compounds_data, function(data) {
 })
 
 # Save --------------------------------------------------------------------
-saveRDS(compounds_logreg_alt, '../../models/compounds_logreg_alt1207.rds')
+saveRDS(compounds_logreg_alt, '../../models/compounds_logreg_alt11162020.rds')

@@ -21,8 +21,8 @@ unique_wells <- read.csv("../../raw_data/actual_unique.csv", header = TRUE, sep 
   st_set_crs("+proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0") %>%
   st_transform("+proj=utm +zone=18 +datum=WGS84 +units=m")
 
-unique_wells %>%
-  st_write("../../raw_data/unique_wells.shp", append = FALSE)
+#unique_wells %>%
+#  st_write("../../raw_data/unique_wells.shp", append = FALSE)
 
 # read in NH business information
 proj_businesses <- st_read(dsn = "../../raw_data/NH_businesses_2016", layer = "NH_businesses_2016") %>%
@@ -42,6 +42,10 @@ proj_businesses <- st_read(dsn = "../../raw_data/NH_businesses_2016", layer = "N
 #proj_businesses %>%
 #  st_write("../../raw_data/nh_industry.shp", append = FALSE)
 
+# well location and industry location are used in impact.py
+impact <- read_csv("../../modeling_data/potential_impact.csv")%>%
+  set_names(paste0('Impact', names(.))) %>%
+  rename(StationID = ImpactStationID)
 
 # Draw a bigger buffer for SG & TCI -------------------------------------------
 # Industries for which airborne transport was confirmed, use 10km based on communication with NHDES
@@ -49,43 +53,91 @@ SG <- proj_businesses%>%
   filter(CONAME == "SAINT-GOBAIN PERFORMANCE PLSTC")
 SG_buffer10km <-  SG%>%
   st_buffer(dist = 10000)
-SG_buffer30km <-  SG%>%
-  st_buffer(dist = 30000)
 
-# Identify wells within the 10km radius buffer zone
+# Identify wells within the 10km radius buffer zone of SG and TCI
 SG_wells <- st_join(unique_wells, SG_buffer10km, join = st_intersects) %>%
   filter(!is.na(NAICS))
 SG_distances <- st_distance(SG_wells, SG)
-SG_wells<- cbind(SG_wells,SG_distances)
+SG_wells<- cbind(SG_wells,SG_distances) %>%
+  mutate(SG_distances = as.numeric(SG_distances)) %>%
+  mutate(ImpactPl = 1/exp(SG_distances/1000)) %>%
+  dplyr::select(StationID, ImpactPl)
 
-SG_wells_30km <- st_join(unique_wells, SG_buffer30km, join = st_intersects) %>%
+# TCI
+TCI <- proj_businesses%>%
+  filter(CONAME == "TEXTILES COATED INC")
+TCI_buffer10km <-  TCI%>%
+  st_buffer(dist = 10000)
+
+
+TCI_wells <- st_join(unique_wells, TCI_buffer10km, join = st_intersects) %>%
   filter(!is.na(NAICS))
+TCI_distances <- st_distance(TCI_wells, TCI)
+TCI_wells<- cbind(TCI_wells,TCI_distances) %>%
+  mutate(TCI_distances = as.numeric(TCI_distances)) %>%
+  mutate(ImpactT = 1/exp(TCI_distances/1000)) %>%
+  dplyr::select(StationID, ImpactT)
+
+# Merge -------------------------------------------------------------------
+impact %>%
+  dplyr::select(StationID, ImpactPl) %>%
+  bind_rows(SG_wells) %>%
+  group_by(StationID) %>%
+  summarise(ImpactPl = sum(ImpactPl)) -> a
+
+impact %>%
+  dplyr::select(StationID, ImpactT) %>%
+  bind_rows(TCI_wells) %>%
+  group_by(StationID) %>%
+  summarise(ImpactT = sum(ImpactT)) -> b
+
+final_industries <- impact %>%
+  dplyr::select(-c(ImpactPl, ImpactT)) %>%
+  left_join(a, by = "StationID") %>%
+  left_join(b, by = "StationID")
+
+sapply(final_industries, function(x){sum(is.na(x))})
+# should not have any missing
+
+# compare with old impact
+final_ind_old <- readRDS('../../modeling_data/final_industries1119.rds')
+
+df_ind <- final_ind_old %>%
+  dplyr::select(StationID, matches("3$")) %>%
+  full_join(final_industries, by = "StationID") %>%
+  replace(is.na(.), 0)
+
+M <- cor(df_ind[,-1])
+
+corrplot::corrplot(M)
+# Save --------------------------------------------------------------------
+saveRDS(final_industries, '../../modeling_data/final_industries11162020.rds')
 
 
 # tmap
-options(tigris_class = "sf")
-nh<-tigris::counties(state = "New Hampshire", cb = TRUE)
-tmap_mode("plot")
-
-tm_shape(nh) + 
-  tm_polygons(border.col = "white") +
-  tm_shape(unique_wells) +
-  tm_bubbles(size = 0.1, border.col = "transparent", 
-             alpha = 0.5, col = "grey30") +
-  tm_shape(SG_buffer30km) +
-  tm_polygons(border.col = "blue", alpha = 0) +
-  tm_shape(SG_wells_30km) +
-  tm_bubbles(size = 0.1, border.col = "blue",
-             alpha = 0.5, col = "grey70") +
-  tm_shape(SG_buffer10km) +
-  tm_polygons(border.col = "red", alpha = 0) +
-  tm_shape(SG_wells) +
-  tm_bubbles(size = 0.1, border.col = "red", 
-             alpha = 0.5, col = "grey70") +
-  tm_layout(legend.title.size = 1.8,
-              legend.text.size = 1.1,
-              legend.outside = T,
-              frame = F)
+# options(tigris_class = "sf")
+# nh<-tigris::counties(state = "New Hampshire", cb = TRUE)
+# tmap_mode("plot")
+# 
+# tm_shape(nh) + 
+#   tm_polygons(border.col = "white") +
+#   tm_shape(unique_wells) +
+#   tm_bubbles(size = 0.1, border.col = "transparent", 
+#              alpha = 0.5, col = "grey30") +
+#   tm_shape(SG_buffer30km) +
+#   tm_polygons(border.col = "blue", alpha = 0) +
+#   tm_shape(SG_wells_30km) +
+#   tm_bubbles(size = 0.1, border.col = "blue",
+#              alpha = 0.5, col = "grey70") +
+#   tm_shape(SG_buffer10km) +
+#   tm_polygons(border.col = "red", alpha = 0) +
+#   tm_shape(SG_wells) +
+#   tm_bubbles(size = 0.1, border.col = "red", 
+#              alpha = 0.5, col = "grey70") +
+#   tm_layout(legend.title.size = 1.8,
+#               legend.text.size = 1.1,
+#               legend.outside = T,
+#               frame = F)
 # TCI <- proj_businesses[proj_businesses@data$CONAME == "TEXTILES COATED INC",]
 # TCI_buffer10km <- gBuffer(TCI, byid = TRUE, width = 10000)
 # #proj_TCIbuffer <-spTransform(TCI_buffer10km, CRS("+proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0"))

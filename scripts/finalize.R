@@ -9,8 +9,8 @@ p_load("docxtools")
 
 # Load --------------------------------------------------------------------
 
-merged_variables <- readRDS('../../modeling_data/merged_variables1207.rds')
-unique_ivs <- readRDS('../../modeling_data/unique_ivs1207.rds')
+merged_variables <- readRDS('../../modeling_data/merged_variables11162020.rds')
+unique_ivs <- readRDS('../../modeling_data/unique_ivs11162020.rds')
 
 
 # Generate separate dataframe for each compound ---------------------------
@@ -41,11 +41,11 @@ lapply(compounds_data, function(x){
 
 # Save --------------------------------------------------------------------
 
-saveRDS(compounds_data, '../../modeling_data/compounds_data1207.rds')
+saveRDS(compounds_data, '../../modeling_data/compounds_data11162020.rds')
 
 
 # Table 1
-compounds_data <- readRDS('../../modeling_data/compounds_data1207.rds')
+compounds_data <- readRDS('../../modeling_data/compounds_data11162020.rds')
 
 compounds_data_addflag<- map(compounds_data, function(data) {
   set.seed(99)
@@ -76,7 +76,7 @@ table1_df<-bind_rows(!!!compounds_data_addflag, .id = "compound") %>%
                               TRUE ~ compound)) 
 
 table1_master<-table1_df %>%
-  select(-c(bedrock_M, hydgrpdcdA)) %>%
+  dplyr::select(-c(bedrock_M, hydgrpdcdA)) %>%
   pivot_longer(-c("compound", "dataset", "DL")) %>%
   group_by(compound, dataset, name) %>%
   summarise(N = n(),
@@ -96,7 +96,7 @@ table1_master<-table1_df %>%
 table1_master %>% 
   #format_engr(., sigdig = 3) %>%
   filter(name == "reg") %>%
-  select(-name) %>%
+  dplyr::select(-name) %>%
   flextable() %>%
   colformat_num(j = 5, digits = 1) %>%
   colformat_num(j = c(6,7,8,9,10), digits = 2) %>%
@@ -129,7 +129,7 @@ level_key <- c("ImpactPl3" = "Industry: Plastics and rubber",
 
 options(pillar.sigfig = 3)
 table1_df %>%
-  select(-c(bedrock_M, hydgrpdcdA)) %>%
+  dplyr::select(-c(bedrock_M, hydgrpdcdA)) %>%
   pivot_longer(-c("compound", "dataset", "DL")) %>%
   group_by(compound, name) %>%
   summarise(N = n(),
@@ -146,8 +146,8 @@ table1_df %>%
   mutate(name = recode(name, !!!level_key)) %>%
   #format_engr(., sigdig = 3) %>%
   filter(compound == "PFOA" & name != "reg") %>%
-  select(name, everything(.)) %>%
-  select(-c(compound, DL, pct_detect)) %>%
+  dplyr::select(name, everything(.)) %>%
+  dplyr::select(-c(compound, DL, pct_detect)) %>%
   separate(name, c("group", "variable"), sep = ":")%>%
   arrange(group, variable) %>%
   flextable() %>%
@@ -160,7 +160,7 @@ table1_df %>%
 
 
 table1_cat<-table1_df %>%
-  select(c(compound, bedrock_M, hydgrpdcdA)) %>%
+  dplyr::select(c(compound, bedrock_M, hydgrpdcdA)) %>%
   pivot_longer(-c("compound")) %>%
   group_by(compound, name) %>%
   summarise(N = n(),
@@ -175,7 +175,7 @@ table1_cat<-table1_df %>%
 table1_cat %>%
   mutate(name = recode(name, !!!level_key)) %>%
   #format_engr(., sigdig = 3) %>%
-  select(name, everything(.)) %>%
+  dplyr::select(name, everything(.)) %>%
   separate(name, c("group", "variable"), sep = ":")%>%
   arrange(group, variable, compound) %>%
   flextable() %>%

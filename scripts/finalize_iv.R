@@ -9,7 +9,7 @@ bedrock <- read.csv("../../raw_data/bedrock_extraction.csv", header = TRUE, sep 
 precip <- read.csv("../../raw_data/precip_PFAS.csv", header = TRUE, sep = ",", na.strings = c("", " ", "NA"))
 recharge <- read.csv("../../raw_data/recharge1122.csv", header = TRUE, sep = ",", na.strings = c("", " ", "NA"))
 # Processed RDS's
-final_industries <- readRDS('../../modeling_data/final_industries1119.rds')
+final_industries <- readRDS('../../modeling_data/final_industries11162020.rds')
 final_soildata <- readRDS('../../modeling_data/final_soildata1227.rds')
 PFASwells <- readRDS('../../modeling_data/PFASwells.rds')
 
@@ -148,5 +148,5 @@ unique_ivs <- unique_ivs[, -which(names(unique_ivs) %in% rm)]
 
 # Save --------------------------------------------------------------------
 
-saveRDS(merged_variables, '../../modeling_data/merged_variables1207.rds')
-saveRDS(unique_ivs, '../../modeling_data/unique_ivs1207.rds')
+saveRDS(merged_variables, '../../modeling_data/merged_variables11162020.rds')
+saveRDS(unique_ivs, '../../modeling_data/unique_ivs11162020.rds')
