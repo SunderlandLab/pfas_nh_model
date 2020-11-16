@@ -27,8 +27,9 @@ welly=well['geometry'].y
 industryx=industry['geometry'].x
 industryy=industry['geometry'].y
 
-#F#ind elevation of industries by searching USGS National Map (3DEP)
-##This takes a long time so I have saved them in the elevation folder
+##Find elevation of industries by searching USGS National Map (3DEP)
+##This takes a long time and only need to be done once
+##output saved to elevations folder
 # source_elevation=[]
 # for lat,lon in zip(industryy,industryx):
 #     source_params={'output':'json','x':lon,'y':lat,'units':'Meters'}
@@ -38,7 +39,8 @@ industryy=industry['geometry'].y
 source_elevation=np.loadtxt('elevation/industry_elevations.txt')
 
 ##Find elevation of wells by searching USGS National Map (3DEP)
-##This takes a long time so I have saved them in the elevation folder
+##This takes a long time and only need to be done once
+##output saved to elevations folder
 # sink_elevation=[]
 # for lat,lon in zip(welly,wellx):
 #     sink_params={'output':'json','x':lon,'y':lat,'units':'Meters'}
