@@ -15,6 +15,9 @@ import urllib
 ##USGS Elevation Point Query Service
 url = r'https://nationalmap.gov/epqs/pqs.php?'
 
+##Select HUC level
+HUC_level=12 #choose either 10 or 12
+
 ##Load sources and sinks
 industry=gpd.read_file('shapefiles/nh_industry.shp') #epsg=32618
 well=gpd.read_file('shapefiles/unique_wells.shp') #epsg=32618
@@ -49,16 +52,22 @@ source_elevation=np.loadtxt('elevation/industry_elevations.txt')
 # np.savetxt('elevation/well_elevations.txt',sink_elevation)
 sink_elevation=np.loadtxt('elevation/well_elevations.txt')
 
-##Load HUC12 shapefile
-huc12_file='wbdhu12_a_us_september2020.gdb'
-WBDHU12=fiona.listlayers(huc12_file)[0]
-huc12=gpd.read_file(huc12_file,layer=WBDHU12) #epsg=4326
-NH_str=[i for i in set(huc12['states']) if type(i)==np.str and 'NH' in i]
-NH_watersheds=huc12['states'].isin(NH_str)
+if HUC_level==10:
+    ##Load HUC10 shapefile
+    huc_file='wbdhu10_a_us_september2020.gdb'
+    huc_str='huc10'
+elif HUC_level==12:
+    ##Load HUC12 shapefile
+    huc_file='wbdhu12_a_us_september2020.gdb'
+    huc_str='huc12'
+WBDHUC=fiona.listlayers(huc_file)[0]
+huc=gpd.read_file(huc_file,layer=WBDHUC) #epsg=4326
+NH_str=[i for i in set(huc['states']) if type(i)==np.str and 'NH' in i]
+NH_watersheds=huc['states'].isin(NH_str)
 
 ##Match well and industry locations to watershed
-well=sjoin(well,huc12[NH_watersheds],how='left')
-industry=sjoin(industry,huc12[NH_watersheds],how='left')
+well=sjoin(well,huc[NH_watersheds],how='left')
+industry=sjoin(industry,huc[NH_watersheds],how='left')
 
 ##Establish impact matrix
 impact=pd.DataFrame(np.zeros((len(well),len(set(industry['indstr_'])))),columns=set(industry['indstr_']))
@@ -68,10 +77,11 @@ for sink in well.index:
     #Elevation of well
     sie=sink_elevation[sink]
 
+
     #HUC code of well
-    watershed=well['huc12'][sink]
+    watershed=well[huc_str][sink]
     #All industries within the same watershed
-    local=industry['huc12']==watershed
+    local=industry[huc_str]==watershed
 
     if sum(local>0):
         for source in industry[local].index:
@@ -88,4 +98,4 @@ for sink in well.index:
 
 ##Save results
 impact.index=well['StationID']
-impact.to_csv('potential_impact.csv')
+impact.to_csv('potential_impact_'+huc_str+'.csv')

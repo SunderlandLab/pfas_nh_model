@@ -39,8 +39,9 @@ vignettes/*.pdf
 .Renviron
 
 
-# HUC12 watershed boundary shapefiles
+# HUC watershed boundary shapefiles
 wbdhu12_a_us_september2020.gdb/
+wbdhu10_a_us_september2020.gdb/
 
 # Industry and well shapefiles
 shapefiles/
