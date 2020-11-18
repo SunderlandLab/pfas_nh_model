@@ -140,7 +140,7 @@ var_imp_df%>%
   theme_classic() + 
   theme(text = element_text(size = 16),
         strip.text = element_text(size = 16),
-        axis.text.x = element_text(size = 16, angle = 45, hjust = 1),
+        axis.text.x = element_text(size = 16, angle = 90, hjust = 1),
         axis.text.y = element_text(size = 16),
         legend.title = element_blank(),
         legend.key.size = unit(1.5, "cm"),
