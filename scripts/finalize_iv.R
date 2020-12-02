@@ -35,6 +35,7 @@ merged_variables <- Reduce(function(dtf1, dtf2) merge(dtf1, dtf2, by = "StationI
 indvars <- merged_variables[,c(1,12:length(merged_variables))]
 unique_ivs <- unique(indvars)
 
+sapply(unique_ivs, function(x){sum(is.na(x))})
 
 # Clean NA's & blanks -----------------------------------------------------
 # (For quantitative variables only)

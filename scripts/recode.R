@@ -35,6 +35,13 @@ recode <- function(PFAS, data){
   return(data)
 }
 
+#LODs for PFOS
+PFASwells1 %>% 
+  filter(PFOSqualifier == "<") %>%
+  dplyr::select(StationID, PFOSnumeric) %>%
+  distinct() ->a
+
+#
 pfoapfhxa <- recode('PFOA', pfoapfhxa)
 pfoapfhxa <- recode('PFHXA', pfoapfhxa)
 PFASwells1 <- recode('PFPEA', PFASwells1)

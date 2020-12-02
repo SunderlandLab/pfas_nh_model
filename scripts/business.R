@@ -37,8 +37,30 @@ proj_businesses <- st_read(dsn = "../../raw_data/NH_businesses_2016", layer = "N
                                     grepl("^322|^323", NAICS) ~ "Pr",
                                     grepl("^334", NAICS) ~ "S",
                                     grepl("^324|^325|^332|^333|^424|^442|^561", NAICS) ~ "OI",
-                                    TRUE ~ NA_character_))
+                                    TRUE ~ NA_character_),
+         detailed_industry = case_when(grepl("^326", NAICS) ~ "Plastics and rubber products manufacturing",
+                                       grepl("^221", NAICS) ~ "Sewage treatment facilities",
+                                       grepl("^562", NAICS) ~ "Waste management and remediation services",
+                                       grepl("^488", NAICS) ~ "Airport operations",
+                                       grepl("^322", NAICS) ~ "Paper manufacturing",
+                                       grepl("^323", NAICS) ~ "Printing and related support activities",
+                                       grepl("^3344", NAICS) ~ "Semiconductor and other electronic component",
+                                       grepl("^313", NAICS) ~ "Textile mills",
+                                       grepl("^314110", NAICS) ~ "Carpet and rug mills",
+                                       grepl("^314999", NAICS) ~ "All other miscellaneous textile product mills",
+                                       grepl("^324", NAICS) ~ "Petroleum and coal products manufacturing",
+                                       grepl("^325", NAICS) ~ "Chemical manufacturing",
+                                       grepl("^3328", NAICS) ~ "Metal coating, engraving, heat treating and allied activities",
+                                       grepl("^332999", NAICS) ~ "All other miscellaneous fabricated metal product manufacturing",
+                                       grepl("^333316", NAICS) ~ "Photographic and photocopying equipment manufacturing",
+                                       grepl("^333318", NAICS) ~ "Other commercial and service industry machinery manufacturing",
+                                       grepl("^333249", NAICS) ~ "Other industrial machinery manufacturing",
+                                       grepl("^424690", NAICS) ~ "Other chemical and allied products merchant wholesalers",
+                                       grepl("^442291", NAICS) ~ "Window treatment stores",
+                                       grepl("^561740", NAICS) ~ "Carpet and upholstery cleaning services",
+                                       TRUE ~ NA_character_))
 
+table(proj_businesses$detailed_industry, useNA = 'ifany')
 #proj_businesses %>%
 #  st_write("../../raw_data/nh_industry.shp", append = FALSE)
 
@@ -47,18 +69,36 @@ impact <- read_csv("../../modeling_data/potential_impact.csv")%>%
   set_names(paste0('Impact', names(.))) %>%
   rename(StationID = ImpactStationID)
 
+# number of wells with non-zero impact by detailed industry
+read_csv("../../modeling_data/potential_impact_huc12_detailed_indsutry.csv")%>%
+  pivot_longer(-StationID) %>%
+  mutate(value = if_else(value>0, 1, 0)) %>%
+  group_by(name) %>%
+  summarise(n = sum(value))
+
 # Draw a bigger buffer for SG & TCI -------------------------------------------
 # Industries for which airborne transport was confirmed, use 10km based on communication with NHDES
 SG <- proj_businesses%>%
   filter(CONAME == "SAINT-GOBAIN PERFORMANCE PLSTC")
 SG_buffer10km <-  SG%>%
   st_buffer(dist = 10000)
+SG_buffer30km <-  SG%>%
+  st_buffer(dist = 30000)
 
-# Identify wells within the 10km radius buffer zone of SG and TCI
+# Identify wells within the 10km radius buffer zone of SG
 SG_wells <- st_join(unique_wells, SG_buffer10km, join = st_intersects) %>%
   filter(!is.na(NAICS))
 SG_distances <- st_distance(SG_wells, SG)
 SG_wells<- cbind(SG_wells,SG_distances) %>%
+  mutate(SG_distances = as.numeric(SG_distances)) %>%
+  mutate(ImpactPl = 1/exp(SG_distances/1000)) %>%
+  dplyr::select(StationID, ImpactPl)
+
+# Identify wells within the 30km radius buffer zone of SG
+SG_wells_30k <- st_join(unique_wells, SG_buffer30km, join = st_intersects) %>%
+  filter(!is.na(NAICS))
+SG_distances <- st_distance(SG_wells_30k, SG)
+SG_wells_30k<- cbind(SG_wells_30k,SG_distances) %>%
   mutate(SG_distances = as.numeric(SG_distances)) %>%
   mutate(ImpactPl = 1/exp(SG_distances/1000)) %>%
   dplyr::select(StationID, ImpactPl)
@@ -68,6 +108,8 @@ TCI <- proj_businesses%>%
   filter(CONAME == "TEXTILES COATED INC")
 TCI_buffer10km <-  TCI%>%
   st_buffer(dist = 10000)
+TCI_buffer30km <-  TCI%>%
+  st_buffer(dist = 30000)
 
 
 TCI_wells <- st_join(unique_wells, TCI_buffer10km, join = st_intersects) %>%
@@ -77,6 +119,16 @@ TCI_wells<- cbind(TCI_wells,TCI_distances) %>%
   mutate(TCI_distances = as.numeric(TCI_distances)) %>%
   mutate(ImpactT = 1/exp(TCI_distances/1000)) %>%
   dplyr::select(StationID, ImpactT)
+
+
+TCI_wells_30k <- st_join(unique_wells, TCI_buffer30km, join = st_intersects) %>%
+  filter(!is.na(NAICS))
+TCI_distances <- st_distance(TCI_wells_30k, TCI)
+TCI_wells_30k<- cbind(TCI_wells_30k,TCI_distances) %>%
+  mutate(TCI_distances = as.numeric(TCI_distances)) %>%
+  mutate(ImpactT = 1/exp(TCI_distances/1000)) %>%
+  dplyr::select(StationID, ImpactT)
+
 
 # Merge -------------------------------------------------------------------
 impact %>%
@@ -96,20 +148,83 @@ final_industries <- impact %>%
   left_join(a, by = "StationID") %>%
   left_join(b, by = "StationID")
 
+# sensitivity analysis for 30k buffer
+impact %>%
+  dplyr::select(StationID, ImpactPl) %>%
+  bind_rows(SG_wells_30k) %>%
+  group_by(StationID) %>%
+  summarise(ImpactPl = sum(ImpactPl)) -> a
+
+impact %>%
+  dplyr::select(StationID, ImpactT) %>%
+  bind_rows(TCI_wells_30k) %>%
+  group_by(StationID) %>%
+  summarise(ImpactT = sum(ImpactT)) -> b
+
+final_industries_30k <- impact %>%
+  dplyr::select(-c(ImpactPl, ImpactT)) %>%
+  left_join(a, by = "StationID") %>%
+  left_join(b, by = "StationID")
+
+
 sapply(final_industries, function(x){sum(is.na(x))})
+
+sapply(final_industries_30k, function(x){sum(is.na(x))})
 # should not have any missing
+options(scipen = 0)
+options(digits = 3)
+# compare two buffer sizes
+p1<-final_industries%>%
+  left_join(final_industries_30k, by = "StationID", suffix = c(".10k", ".30k")) %>%
+  #filter(ImpactPl10k != ImpactPl30k | ImpactT10k != ImpactT30k) %>%
+  dplyr::select(contains("ImpactPl") | contains("ImpactT")) %>%
+  pivot_longer(everything(), names_to = "variable", values_to = "value") %>%
+  separate(variable, into = c("industry", "distance")) %>%
+  ggplot(aes(x = value)) +
+  geom_density(aes(fill = distance), alpha = 0.4) +
+  facet_wrap(~ industry, scales = "free",  
+             labeller = labeller(industry = c(ImpactPl = "Plastics and rubber",
+                                              ImpactT ="Textile manufacturing"))) +
+  scale_fill_brewer(palette = "Set1")+
+  scale_x_continuous(name = "Industrial impact") +
+  theme_classic() +
+  labs(fill=NULL, y = "Density")+
+  theme(text = element_text(size = 16),
+        strip.text = element_text(size = 16),
+        axis.text.x = element_text(size = 16),
+        axis.text.y = element_text(size = 16),
+        legend.position = "none")
+p2<-final_industries%>%
+  left_join(final_industries_30k, by = "StationID", suffix = c(".10k", ".30k")) %>%
+  #filter(ImpactPl10k != ImpactPl30k | ImpactT10k != ImpactT30k) %>%
+  dplyr::select(contains("ImpactPl") | contains("ImpactT")) %>%
+  pivot_longer(everything(), names_to = "variable", values_to = "value") %>%
+  separate(variable, into = c("industry", "distance")) %>%
+  ggplot(aes(x = value)) +
+  geom_density(aes(fill = distance), alpha = 0.4) +
+  facet_wrap(~ industry, scales = "free",  
+             labeller = labeller(industry = c(ImpactPl = "Plastics and rubber",
+                                              ImpactT ="Textile manufacturing"))) +
+  scale_fill_brewer(palette = "Set1")+
+  scale_x_continuous(trans = "log10",
+    name = "Industrial impact") +
+  theme_classic() +
+  labs(fill='Buffer distance', y = "Density")+
+  theme(text = element_text(size = 16),
+        strip.text = element_text(size = 16),
+        axis.text.x = element_text(size = 16),
+        axis.text.y = element_text(size = 16),
+        legend.title = element_text(size = 16),
+        legend.key.size = unit(1, "cm"),
+        legend.text = element_text(size = 16),
+        legend.position="bottom")
+ggpubr::ggarrange(p1, p2, 
+          labels = c("A", "B"),
+          ncol = 1, nrow = 2)
+ggsave("../../output/Figure_sens_buffer_size.png",width = 9,
+       height = 9,
+       units = "in")
 
-# compare with old impact
-final_ind_old <- readRDS('../../modeling_data/final_industries1119.rds')
-
-df_ind <- final_ind_old %>%
-  dplyr::select(StationID, matches("3$")) %>%
-  full_join(final_industries, by = "StationID") %>%
-  replace(is.na(.), 0)
-
-M <- cor(df_ind[,-1])
-
-corrplot::corrplot(M)
 # Save --------------------------------------------------------------------
 saveRDS(final_industries, '../../modeling_data/final_industries11162020.rds')
 

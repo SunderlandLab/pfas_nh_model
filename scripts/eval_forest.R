@@ -119,16 +119,22 @@ level_key <- c("ImpactPl" = "Industry: Plastics and rubber",
                "ImpactS" = "Industry: Semiconductor manufacturing",
                "wtdepannmin" = "Hydro: Depth to water table",
                "brockdepmin" = "Geo: Depth to bedrock")
-
+name_key <- c("PFPeA" = "PFPeA\n\nn:1618\nAcc:78%\nSpe:91%\nSen:49%", 
+              "PFHxA" = "PFHxA\n\nn:1726\nAcc:75%\nSpe:85%\nSen:64%", 
+              "PFHpA" = "PFHpA\n\nn:2221\nAcc:78%\nSpe:91%\nSen:52%", 
+              "PFOA" = "PFOA\n\nn:2377\nAcc:78%\nSpe:54%\nSen:88%", 
+              "PFOS" = "PFOS\n\nn:2376\nAcc:83%\nSpe:95%\nSen:28%")
 ##########################
 #Option 1 facet_grid 2D  #
 ##########################
 var_imp_df%>%
   mutate(variable = recode(variable, !!!level_key)) %>%
   separate(variable, into = c("group", "varname"), sep = ":") %>%
-  mutate(varname = trimws(varname))%>%
+  mutate(varname = trimws(varname),
+         group = factor(group, levels = c("Industry", "Geo", "Hydro", "Soil")))%>%
   pivot_longer(-c(varname, group)) %>%
   mutate(name = factor(name, levels = c("PFPeA", "PFHxA", "PFHpA", "PFOA", "PFOS")))%>%
+  mutate(name = recode(name, !!!name_key)) %>%
   ggplot(aes(x= reorder(varname, value), 
              y=value, fill = value)) +
   geom_bar(stat = "identity", color = "grey50") +
@@ -143,11 +149,11 @@ var_imp_df%>%
         axis.text.x = element_text(size = 16, angle = 90, hjust = 1),
         axis.text.y = element_text(size = 16),
         legend.title = element_blank(),
-        legend.key.size = unit(1.5, "cm"),
+        legend.key.size = unit(1.2, "cm"),
         legend.text = element_text(size = 16),
         legend.position="bottom")
-ggsave("../../output/Figure2_rf_class_var_imp.png",width = 9,
-  height = 9,
+ggsave("../../output/Figure2_rf_class_var_imp.png",width = 10,
+  height = 10,
   units = "in")
 
 ##########################
@@ -224,11 +230,11 @@ map_pfoa_pfos <- compounds_data[['PFOA']] %>%
   left_join(compounds_data[['PFOS']] %>% select(StationID, reg), by = "StationID", suffix = c("_pfoa", "_pfos")) %>%
   left_join(unique, by = "StationID") %>%
   mutate(reg = reg_pfoa + reg_pfos,
-         reg_cat =  cut(reg,
+         `PFOA + PFOS (ng/L)` =  cut(reg,
                         breaks=c(0, 10, 15, 30, 70, 53000),
                         labels=c("< 10", "10 - 15", "15 - 30", "30 - 70","> 70"),
                         include.lowest=TRUE)) %>%
-  select(StationID, reg_cat,  Longitude, Latitude) %>%
+  select(StationID, `PFOA + PFOS (ng/L)`, Longitude, Latitude) %>%
   filter(!is.na(Longitude) & !is.na(Latitude)) %>%
   st_as_sf(coords = c("Longitude", "Latitude")) %>%
   st_set_crs("WGS84") 
@@ -236,15 +242,16 @@ map_pfoa_pfos <- compounds_data[['PFOA']] %>%
 m2<-tm_shape(nh_map) +
   tm_polygons(border.col = "white") +
   tm_shape(map_pfoa_pfos) +
-  tm_bubbles(col = "reg_cat", 
+  tm_bubbles(col = "PFOA + PFOS (ng/L)", 
              size = 0.3, border.col = "transparent", 
              alpha = 0.7,
              palette = "-RdYlGn") + 
-  tm_layout(legend.title.size = 1.8,
-            legend.text.size = 1.1,
-            legend.outside = T,
+  tm_layout(legend.outside = T,
             frame = F)
-tmap_save(m2, "../../output/TOC_PFOA_PFOS.png")
+tmap_save(m2, "../../output/TOC_PFOA_PFOS.png", 
+          width = 4,
+          height = 7,
+          units = "in")
 
 us_map <- tigris::states(cb = TRUE) %>%
   st_as_sf()%>%
