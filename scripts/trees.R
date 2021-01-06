@@ -9,8 +9,8 @@ library(reshape2)
 
 # Load --------------------------------------------------------------------
 
-compounds_data <- readRDS('../../modeling_data/compounds_data11162020.rds')
-compounds_logreg_alt <- readRDS('../../models/compounds_logreg_alt11162020.rds')
+compounds_data <- readRDS('../../modeling_data/compounds_data01052021.rds')
+compounds_logreg_alt <- readRDS('../../models/compounds_logreg_alt01052021.rds')
 
 # Model -------------------------------------------------------------------
 # Uses the same train and test sets as logistic regression
@@ -94,7 +94,7 @@ for (comp in compounds) {
 
 # Save --------------------------------------------------------------------
 
-saveRDS(compounds_forest, '../../models/compounds_forest11162020.rds')
+saveRDS(compounds_forest, '../../models/compounds_forest01052021.rds')
 
 
 

@@ -9,8 +9,8 @@ p_load("docxtools")
 
 # Load --------------------------------------------------------------------
 
-merged_variables <- readRDS('../../modeling_data/merged_variables11162020.rds')
-unique_ivs <- readRDS('../../modeling_data/unique_ivs11162020.rds')
+merged_variables <- readRDS('../../modeling_data/merged_variables01052021.rds')
+unique_ivs <- readRDS('../../modeling_data/unique_ivs01052021.rds')
 
 
 # Generate separate dataframe for each compound ---------------------------
@@ -41,11 +41,11 @@ lapply(compounds_data, function(x){
 
 # Save --------------------------------------------------------------------
 
-saveRDS(compounds_data, '../../modeling_data/compounds_data11162020.rds')
+saveRDS(compounds_data, '../../modeling_data/compounds_data01052021.rds')
 
 
 # Table 1
-compounds_data <- readRDS('../../modeling_data/compounds_data11162020.rds')
+compounds_data <- readRDS('../../modeling_data/compounds_data01052021.rds')
 
 compounds_data_addflag<- map(compounds_data, function(data) {
   set.seed(99)
@@ -106,24 +106,27 @@ table1_master %>%
   save_as_docx(path = "../../output/Table1_pfas_conc.docx")
 
 
-level_key <- c("ImpactPl3" = "Industry: Plastics and rubber", 
+level_key <- c("ImpactPl" = "Industry: Plastics and rubber", 
                "recharge" = "Hydro: Groundwater recharge",
                "precip" = "Hydro: Monthly precipitation",
-               "ImpactT3" = "Industry: Textiles manufacturing",
+               "ImpactT" = "Industry: Textiles manufacturing",
                "silttotal_r" = "Soil: Percent total silt",
                "cec7_r" = "Soil: Cation exchange capacity",
                "claytotal_r" = "Soil: Percent total clay",
                "slopegradwta" = "Hydro: Slope gradient",
-               "ImpactPr3" = "Industry: Printing industry",
+               "ImpactPr" = "Industry: Printing industry",
                "soc0_999" = "Soil: Organic carbon",
                "dbthirdbar_r" = "Soil: Bulk density",
                "awc_r" = "Soil: Available water capacity",
-               "ImpactOI3" = "Industry: Other",
-               "ImpactAW3" = "Industry: Airport and waste management",
+               "ImpactOI" = "Industry: Other",
+               "ImpactW" = "Industry: Waste management",
+               "ImpactA" = "Industry: Airport",
+               "ImpactAFFF" = "Industry: Military AFFF",
+               "ImpactM" = "Industry: Metal plating",
                "hzdep" = "Soil: Thickness of soil horizon",
                "bedrock_M" = "Geo: Bedrock type",
                "hydgrpdcdA" = "Hydro: Low runoff potential",
-               "ImpactS3" = "Industry: Semiconductor manufacturing",
+               "ImpactS" = "Industry: Semiconductor manufacturing",
                "wtdepannmin" = "Hydro: Depth to water table",
                "brockdepmin" = "Geo: Depth to bedrock")
 

@@ -13,8 +13,8 @@ library(ggthemes)
 options(scipen=999)
 # Load --------------------------------------------------------------------
 
-compounds_forest <- readRDS('../../models/compounds_forest11162020.rds')
-compounds_data <- readRDS('../../modeling_data/compounds_data11162020.rds')
+compounds_forest <- readRDS('../../models/compounds_forest01052021.rds')
+compounds_data <- readRDS('../../modeling_data/compounds_data01052021.rds')
 
 
 
@@ -84,7 +84,7 @@ sens_spec_tablesf <- map(compounds_forest, function(clist) {
 })
 
 map_df(sens_spec_tablesf, calc_model_performance, .id = "compound")%>%
- write_csv("../../output/sens_spec_alt_rf_11162020.csv")
+ write_csv("../../output/sens_spec_alt_rf_01052021.csv")
 
 
 # Variable Importance Plots
@@ -112,18 +112,21 @@ level_key <- c("ImpactPl" = "Industry: Plastics and rubber",
                "dbthirdbar_r" = "Soil: Bulk density",
                "awc_r" = "Soil: Available water capacity",
                "ImpactOI" = "Industry: Other",
-               "ImpactAW" = "Industry: Airport and waste management",
+               "ImpactA" = "Industry: Airport",
+               "ImpactW" = "Industry: Waste management",
+               "ImpactAFFF" = "Industry: Military AFFF",
+               "ImpactM" = "Industry: Metal plating",
                "hzdep" = "Soil: Thickness of soil horizon",
                "bedrock_M" = "Geo: Bedrock type",
                "hydgrpdcdA" = "Hydro: Low runoff potential",
                "ImpactS" = "Industry: Semiconductor manufacturing",
                "wtdepannmin" = "Hydro: Depth to water table",
                "brockdepmin" = "Geo: Depth to bedrock")
-name_key <- c("PFPeA" = "PFPeA\n\nn:1618\nAcc:78%\nSpe:91%\nSen:49%", 
+name_key <- c("PFPeA" = "PFPeA\n\nn:1618\nAcc:78%\nSpe:92%\nSen:48%", 
               "PFHxA" = "PFHxA\n\nn:1726\nAcc:75%\nSpe:85%\nSen:64%", 
-              "PFHpA" = "PFHpA\n\nn:2221\nAcc:78%\nSpe:91%\nSen:52%", 
-              "PFOA" = "PFOA\n\nn:2377\nAcc:78%\nSpe:54%\nSen:88%", 
-              "PFOS" = "PFOS\n\nn:2376\nAcc:83%\nSpe:95%\nSen:28%")
+              "PFHpA" = "PFHpA\n\nn:2221\nAcc:78%\nSpe:91%\nSen:54%", 
+              "PFOA" = "PFOA\n\nn:2377\nAcc:78%\nSpe:53%\nSen:88%", 
+              "PFOS" = "PFOS\n\nn:2376\nAcc:83%\nSpe:95%\nSen:29%")
 ##########################
 #Option 1 facet_grid 2D  #
 ##########################

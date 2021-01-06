@@ -24,7 +24,7 @@ unique_wells <- read.csv("../../raw_data/actual_unique.csv", header = TRUE, sep 
 #unique_wells %>%
 #  st_write("../../raw_data/unique_wells.shp", append = FALSE)
 
-# read in NH business information
+# read in NH business information from ESRI business analyst
 proj_businesses <- st_read(dsn = "../../raw_data/NH_businesses_2016", layer = "NH_businesses_2016") %>%
   filter(grepl("^22132|^313|^314110|^314999|^322|^323|^324|^325|^3328|^332999|^3344|^48811|^562|^326|^333318|^333316|^333249|^424690|^442291|^561740", NAICS))%>%
   dplyr::select(c("OBJECTID", "CONAME", "NAICS"))%>%
@@ -33,10 +33,12 @@ proj_businesses <- st_read(dsn = "../../raw_data/NH_businesses_2016", layer = "N
   # create industry group label based on NAICS code
   mutate(industry_group = case_when(grepl("^313|^314", NAICS) ~ "T",
                                     grepl("^326", NAICS) ~ "Pl",
-                                    grepl("^562|^488|^221", NAICS) ~ "AW",
+                                    grepl("^562|^221", NAICS) ~ "W",
+                                    grepl("^488", NAICS) ~ "A",
                                     grepl("^322|^323", NAICS) ~ "Pr",
-                                    grepl("^334", NAICS) ~ "S",
-                                    grepl("^324|^325|^332|^333|^424|^442|^561", NAICS) ~ "OI",
+                                    grepl("^3344", NAICS) ~ "S",
+                                    grepl("^3328|^332999", NAICS) ~ "M",
+                                    grepl("^324|^325|^333|^424|^442|^561", NAICS) ~ "OI",
                                     TRUE ~ NA_character_),
          detailed_industry = case_when(grepl("^326", NAICS) ~ "Plastics and rubber products manufacturing",
                                        grepl("^221", NAICS) ~ "Sewage treatment facilities",
@@ -61,20 +63,94 @@ proj_businesses <- st_read(dsn = "../../raw_data/NH_businesses_2016", layer = "N
                                        TRUE ~ NA_character_))
 
 table(proj_businesses$detailed_industry, useNA = 'ifany')
-#proj_businesses %>%
-#  st_write("../../raw_data/nh_industry.shp", append = FALSE)
+table(proj_businesses$industry_group, useNA = 'ifany')
+# proj_businesses %>%
+#   st_write("../../raw_data/nh_industry_01042021.shp", append = FALSE)
+
+# read in NH business information from FRS, downloaded from https://www.epa.gov/frs/epa-state-combined-csv-download-files
+frs_businesses <- read_csv("../../raw_data/FRS/NH_NAICS_FILE.CSV") %>%
+  left_join(read_csv("../../raw_data/FRS/NH_FACILITY_FILE.CSV"), by = "REGISTRY_ID") %>%
+  mutate(NAICS = NAICS_CODE,
+         CREATE_DATE = lubridate::dmy(CREATE_DATE)) %>%
+  filter(CREATE_DATE <= as.Date('2017-10-31'),
+         grepl("^22132|^313|^314110|^314999|^322|^323|^324|^325|^3328|^332999|^3344|^48811|^562|^326|^333318|^333316|^333249|^424690|^442291|^561740", NAICS)) %>%   
+  distinct(LATITUDE83, LONGITUDE83, .keep_all = T) %>%
+  # create industry group label based on NAICS code 
+  mutate(industry_group = case_when(grepl("^313|^314", NAICS) ~ "T",
+                                  grepl("^326", NAICS) ~ "Pl",
+                                  grepl("^562|^221", NAICS) ~ "W",
+                                  grepl("^488", NAICS) ~ "A",
+                                  grepl("^322|^323", NAICS) ~ "Pr",
+                                  grepl("^3344", NAICS) ~ "S",
+                                  grepl("^3328|^332999", NAICS) ~ "M",
+                                  grepl("^324|^325|^333|^424|^442|^561", NAICS) ~ "OI",
+                                  TRUE ~ NA_character_),
+       detailed_industry = case_when(grepl("^326", NAICS) ~ "Plastics and rubber products manufacturing",
+                                     grepl("^221", NAICS) ~ "Sewage treatment facilities",
+                                     grepl("^562", NAICS) ~ "Waste management and remediation services",
+                                     grepl("^488", NAICS) ~ "Airport operations",
+                                     grepl("^322", NAICS) ~ "Paper manufacturing",
+                                     grepl("^323", NAICS) ~ "Printing and related support activities",
+                                     grepl("^3344", NAICS) ~ "Semiconductor and other electronic component",
+                                     grepl("^313", NAICS) ~ "Textile mills",
+                                     grepl("^314110", NAICS) ~ "Carpet and rug mills",
+                                     grepl("^314999", NAICS) ~ "All other miscellaneous textile product mills",
+                                     grepl("^324", NAICS) ~ "Petroleum and coal products manufacturing",
+                                     grepl("^325", NAICS) ~ "Chemical manufacturing",
+                                     grepl("^3328", NAICS) ~ "Metal coating, engraving, heat treating and allied activities",
+                                     grepl("^332999", NAICS) ~ "All other miscellaneous fabricated metal product manufacturing",
+                                     grepl("^333316", NAICS) ~ "Photographic and photocopying equipment manufacturing",
+                                     grepl("^333318", NAICS) ~ "Other commercial and service industry machinery manufacturing",
+                                     grepl("^333249", NAICS) ~ "Other industrial machinery manufacturing",
+                                     grepl("^424690", NAICS) ~ "Other chemical and allied products merchant wholesalers",
+                                     grepl("^442291", NAICS) ~ "Window treatment stores",
+                                     grepl("^561740", NAICS) ~ "Carpet and upholstery cleaning services",
+                                     TRUE ~ NA_character_)) %>%
+  filter(!is.na(industry_group), !is.na(LATITUDE83), !is.na(LONGITUDE83)) %>%
+  dplyr::select(REGISTRY_ID, PRIMARY_NAME,  LATITUDE83, LONGITUDE83, NAICS, industry_group, detailed_industry) %>%
+  st_as_sf(coords = c("LONGITUDE83", "LATITUDE83"), crs = 4269) %>% #NAD83
+  # transform to be the same CRS as wells
+  st_transform(st_crs(unique_wells)) 
+
+
+table(frs_businesses$detailed_industry, useNA = 'ifany')
+table(frs_businesses$industry_group, useNA = 'ifany')
+# frs_businesses %>%
+#    st_write("../../raw_data/frs_industry_01042021.shp", append = FALSE)
+
+# ewg sites
+afff_sites <- data.frame("name"=c("New Boston AFM", "Center Strafford Training Site", "Newington", "Pease Air Force Base"), 
+                        'lat' = c(42.94953788784724,  43.27252715038138, 43.100428055835174, 43.080836771144526), 
+                        'long' = c(-71.62159231164273,  -71.12722267231433, -70.83346568498517, -70.80057928425452)) %>%
+  st_as_sf(coords = c("long", "lat"), crs = 4269) %>% #NAD83
+  # transform to be the same CRS as wells
+  st_transform(st_crs(unique_wells)) 
+
+#afff_sites %>%
+#    st_write("../../raw_data/afff_sites_01042021.shp", append = FALSE)
+
 
 # well location and industry location are used in impact.py
-impact <- read_csv("../../modeling_data/potential_impact.csv")%>%
+ewg <- read_csv("../../modeling_data/ewg_impact_huc12.csv")%>%
   set_names(paste0('Impact', names(.))) %>%
   rename(StationID = ImpactStationID)
 
+impact <- read_csv("../../modeling_data/potential_impact_huc12.csv")%>%
+  set_names(paste0('Impact', names(.))) %>%
+  rename(StationID = ImpactStationID) %>%
+  left_join(ewg, by = "StationID")
+
+frs <- read_csv("../../modeling_data/frs_impact_huc12.csv")%>%
+  set_names(paste0('Impact', names(.))) %>%
+  rename(StationID = ImpactStationID) %>%
+  left_join(ewg, by = "StationID")
+
 # number of wells with non-zero impact by detailed industry
-read_csv("../../modeling_data/potential_impact_huc12_detailed_indsutry.csv")%>%
-  pivot_longer(-StationID) %>%
-  mutate(value = if_else(value>0, 1, 0)) %>%
-  group_by(name) %>%
-  summarise(n = sum(value))
+# read_csv("../../modeling_data/potential_impact_huc12_detailed_indsutry.csv")%>%
+#   pivot_longer(-StationID) %>%
+#   mutate(value = if_else(value>0, 1, 0)) %>%
+#   group_by(name) %>%
+#   summarise(n = sum(value))
 
 # Draw a bigger buffer for SG & TCI -------------------------------------------
 # Industries for which airborne transport was confirmed, use 10km based on communication with NHDES
@@ -226,7 +302,7 @@ ggsave("../../output/Figure_sens_buffer_size.png",width = 9,
        units = "in")
 
 # Save --------------------------------------------------------------------
-saveRDS(final_industries, '../../modeling_data/final_industries11162020.rds')
+saveRDS(final_industries, '../../modeling_data/final_industries01052021.rds')
 
 
 # tmap
