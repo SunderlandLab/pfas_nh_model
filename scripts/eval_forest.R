@@ -13,14 +13,20 @@ library(ggthemes)
 options(scipen=999)
 # Load --------------------------------------------------------------------
 
-compounds_forest <- readRDS('../../models/compounds_forest01052021.rds')
-compounds_data <- readRDS('../../modeling_data/compounds_data01052021.rds')
+compounds_forest <- readRDS('../../models/compounds_forest01192021.rds')
+compounds_data <- readRDS('../../modeling_data/compounds_data01192021.rds')
 
+# compounds_data %>%
+#   map(function(x){
+#     x %>% 
+#       dplyr::select(StationID, final)
+#   }) %>%
+#   saveRDS("../../modeling_data/wells_with_label.rds")
 
 
 # Tune model --------------------------------------------------------------
 # Determine which combo minimizes error and maximizes predictive accuracy
-# DO NOT RUN IT HERE!
+# TAKES A LONG TIME TO RUN
 
 # compounds <- names(compounds_forest)
 # 
@@ -29,19 +35,19 @@ compounds_data <- readRDS('../../modeling_data/compounds_data01052021.rds')
 #   ntrees <- 1000
 #   form <- as.formula("final~.")
 #   num_vars <- ncol(compounds_forest[[comp]][['train_data']])
-#   predictions_table <- data.frame("mtry" = rep(0,(num_vars - 4)*10), 
-#                                   "nodesize" = rep(0,(num_vars - 4)*10), 
+#   predictions_table <- data.frame("mtry" = rep(0,(num_vars - 4)*10),
+#                                   "nodesize" = rep(0,(num_vars - 4)*10),
 #                                   "predictive accuracy" = rep(0,(num_vars - 4)*10))
 #   error_table <- data.frame("tree.index" = c(1:ntrees))
 #   tracker <- 1
-#   for (i in 1:2) {
-#     for (j in 1:2) { 
+#   for (i in 1:15) {
+#     for (j in 1:10) {
 #       mt <- i + 4 # Because starting at 5, not 1
-#       model <- randomForest(form, 
-#                             data = compounds_forest[[comp]][['train_data']], 
-#                             mtry = mt, 
-#                             ntree = ntrees, 
-#                             nodesize = j, 
+#       model <- randomForest(form,
+#                             data = compounds_forest[[comp]][['train_data']],
+#                             mtry = mt,
+#                             ntree = ntrees,
+#                             nodesize = j,
 #                             importance = TRUE)
 #       error_table <- cbind(error_table, model$err.rate[,1])
 #       col_name <- paste0("m",i,"ns",j)
@@ -54,25 +60,19 @@ compounds_data <- readRDS('../../modeling_data/compounds_data01052021.rds')
 #       print(tracker)
 #       tracker <- tracker + 1
 #     }
-#     tuned_models[[comp]] <- list(predictions_table = predictions_table, 
+#     tuned_models[[comp]] <- list(predictions_table = predictions_table,
 #                    error_table = error_table)
 #   }
 # }
-
-  
-
-
-# Plot regression forests -------------------------------------------------
-
-# for (compound in compounds) {
-#   comp_folder <- paste0("../../models_forest_eval/", compound, '/')
-#   dir.create(comp_folder)
-#   jpeg(paste0(comp_folder, compound, '_fplot.jpg'))
-#   plot(compounds_forest[[compound]][['reg_forest']],
-#        main = paste(compound, 'Regression Random Forest'))
-#   dev.off()
+#
+#saveRDS(tuned_models, '../../models_forest_eval/tuned_models01192021.rds')
+#
+# for (comp in compounds) {
+#   print(comp)
+#   index <- which.max(tuned_models[[comp]]$predictions_table$predictive.accuracy)
+#   print(tuned_models[[comp]]$predictions_table[index,])
 # }
-# 
+
 
 # Sensitivity and specificity analysis ------------------------------------
 
@@ -84,7 +84,7 @@ sens_spec_tablesf <- map(compounds_forest, function(clist) {
 })
 
 map_df(sens_spec_tablesf, calc_model_performance, .id = "compound")%>%
- write_csv("../../output/sens_spec_alt_rf_01052021.csv")
+ write_csv("../../output/sens_spec_alt_rf_01192021.csv")
 
 
 # Variable Importance Plots
@@ -107,26 +107,27 @@ level_key <- c("ImpactPl" = "Industry: Plastics and rubber",
                "cec7_r" = "Soil: Cation exchange capacity",
                "claytotal_r" = "Soil: Percent total clay",
                "slopegradwta" = "Hydro: Slope gradient",
-               "ImpactPr" = "Industry: Printing industry",
+               #"ImpactPr" = "Industry: Printing industry",
                "soc0_999" = "Soil: Organic carbon",
                "dbthirdbar_r" = "Soil: Bulk density",
                "awc_r" = "Soil: Available water capacity",
-               "ImpactOI" = "Industry: Other",
-               "ImpactA" = "Industry: Airport",
-               "ImpactW" = "Industry: Waste management",
-               "ImpactAFFF" = "Industry: Military AFFF",
-               "ImpactM" = "Industry: Metal plating",
+               #"ImpactOI" = "Industry: Other",
+               "ImpactAirports" = "Industry: Airports",
+               "ImpactWWTP" = "Industry: Wastewater treatment plant",
+               "ImpactMilitary" = "Industry: Military AFFF",
+               #"ImpactM" = "Industry: Metal plating",
                "hzdep" = "Soil: Thickness of soil horizon",
                "bedrock_M" = "Geo: Bedrock type",
                "hydgrpdcdA" = "Hydro: Low runoff potential",
-               "ImpactS" = "Industry: Semiconductor manufacturing",
+               #"ImpactS" = "Industry: Semiconductor manufacturing",
                "wtdepannmin" = "Hydro: Depth to water table",
                "brockdepmin" = "Geo: Depth to bedrock")
-name_key <- c("PFPeA" = "PFPeA\n\nn:1618\nAcc:78%\nSpe:92%\nSen:48%", 
-              "PFHxA" = "PFHxA\n\nn:1726\nAcc:75%\nSpe:85%\nSen:64%", 
-              "PFHpA" = "PFHpA\n\nn:2221\nAcc:78%\nSpe:91%\nSen:54%", 
-              "PFOA" = "PFOA\n\nn:2377\nAcc:78%\nSpe:53%\nSen:88%", 
-              "PFOS" = "PFOS\n\nn:2376\nAcc:83%\nSpe:95%\nSen:29%")
+name_key <- c("PFPeA" = "PFPeA\n\nn:1618\nAcc:77%\nSpe:89%\nSen:47%", 
+              "PFHxA" = "PFHxA\n\nn:1726\nAcc:74%\nSpe:82%\nSen:63%", 
+              "PFHpA" = "PFHpA\n\nn:2221\nAcc:78%\nSpe:86%\nSen:63%", 
+              "PFOA" = "PFOA\n\nn:2377\nAcc:79%\nSpe:58%\nSen:89%", 
+              "PFOS" = "PFOS\n\nn:2376\nAcc:84%\nSpe:96%\nSen:31%",
+              "PFAS" = "PFAS\n\nn:2383\nAcc:82%\nSpe:56%\nSen:91%")
 ##########################
 #Option 1 facet_grid 2D  #
 ##########################
@@ -136,7 +137,7 @@ var_imp_df%>%
   mutate(varname = trimws(varname),
          group = factor(group, levels = c("Industry", "Geo", "Hydro", "Soil")))%>%
   pivot_longer(-c(varname, group)) %>%
-  mutate(name = factor(name, levels = c("PFPeA", "PFHxA", "PFHpA", "PFOA", "PFOS")))%>%
+  mutate(name = factor(name, levels = c("PFPeA", "PFHxA", "PFHpA", "PFOA", "PFOS", "PFAS")))%>%
   mutate(name = recode(name, !!!name_key)) %>%
   ggplot(aes(x= reorder(varname, value), 
              y=value, fill = value)) +
@@ -155,7 +156,7 @@ var_imp_df%>%
         legend.key.size = unit(1.2, "cm"),
         legend.text = element_text(size = 16),
         legend.position="bottom")
-ggsave("../../output/Figure2_rf_class_var_imp.png",width = 10,
+ggsave("../../output/Figure1_rf_class_var_imp.png",width = 10,
   height = 10,
   units = "in")
 

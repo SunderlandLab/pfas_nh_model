@@ -17,8 +17,9 @@ All can be found in the /scripts folder
 						 		 (modeling_data/PFASwells.rds)
 - soildata.R   : process soil data 
 							 	 (modeling_data/final_soildata.rds)
-- business.R   : business extraction 
+- point_sources_ucmr.R   : business extraction 
 							 	 (modeling_data/final_industries.rds)
+(- business.R   : business extraction, replaced by point_sources_ucmr.R)
 (- industries.R : quantify and aggregate industries, replaced by impact.py)
 (- precip.R    : use precip_PFAS.csv)
 - finalize_iv.R: merge all independent variables into single dataset

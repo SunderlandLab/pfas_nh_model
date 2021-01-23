@@ -9,8 +9,8 @@ library(reshape2)
 
 # Load --------------------------------------------------------------------
 
-compounds_data <- readRDS('../../modeling_data/compounds_data01052021.rds')
-compounds_logreg_alt <- readRDS('../../models/compounds_logreg_alt01052021.rds')
+compounds_data <- readRDS('../../modeling_data/compounds_data01192021.rds')
+compounds_logreg_alt <- readRDS('../../models/compounds_logreg_01192021.rds')
 
 # Model -------------------------------------------------------------------
 # Uses the same train and test sets as logistic regression
@@ -31,15 +31,15 @@ compounds_logreg_alt <- readRDS('../../models/compounds_logreg_alt01052021.rds')
 #old:  mtry = c(8, 23, 22, 5, 9), nodesize = c(3, 6, 6, 10, 7)) for classification, mtry = c(9, 13, 17, 22, 17), nodesize = c(4, 10, 10, 10, 8)) for regression
 
 compounds <- names(compounds_data)
-parameters <- data.frame(compound = c("PFOA","PFHXA","PFPEA","PFHPA","PFOS"),
-                         ntree = c(1000, 1000, 1000, 1000, 1000),
-                         mtry = c(15, 21, 9, 13, 10),
-                         nodesize = c(3, 7, 10, 8, 7))
+parameters <- data.frame(compound = c("PFOA","PFHXA","PFPEA","PFHPA","PFOS", "PFAS"),
+                         ntree = c(1000, 1000, 1000, 1000, 1000, 1000),
+                         mtry = c(14, 18, 19, 11, 6, 11),
+                         nodesize = c(8, 10, 3, 8, 3, 2))
 
-reg_parameters <- data.frame(compound = c("PFOA","PFHXA","PFPEA","PFHPA","PFOS"),
-                             ntree = c(500, 500, 500, 500, 500),
-                             mtry = c(7, 6, 14, 15, 14),
-                             nodesize = c(5, 1, 7, 8, 9))
+reg_parameters <- data.frame(compound = c("PFOA","PFHXA","PFPEA","PFHPA","PFOS", "PFAS"),
+                            ntree = c(500, 500, 500, 500, 500, 500),
+                            mtry = c(7, 6, 14, 15, 14, 5),
+                            nodesize = c(5, 1, 7, 8, 9, 1))
 
 compounds_forest <- list()
 for (comp in compounds) {
@@ -55,25 +55,25 @@ for (comp in compounds) {
                          importance = TRUE)
   predictions <- forest %>% predict(clist[['test_data']], type = "class")
   
-  # forest_correct <- predictions == clist[['test_data']]$final
-  # forest_correct <- as.numeric(forest_correct)
-  
-  # Forest 2: Regression; only with detects, log transform
+  forest_correct <- predictions == clist[['test_data']]$final
+  forest_correct <- as.numeric(forest_correct)
+
+  #Forest 2: Regression; only with detects, log transform
   set.seed(123)
   reg <- compounds_data[[comp]][compounds_data[[comp]]$final == 1, ]%>%
     mutate(reg_log = log(reg))%>%
-    dplyr::select(-c(StationID, reg, final, matches("2$")))
+    dplyr::select(-c(StationID, reg, final))
 
   ids <- sample(0.7*nrow(reg))
   reg_train <- reg[ids,]
   reg_test <- reg[-ids,]
 
-  reg_forest <- randomForest(reg_log~., data = reg_train, 
+  reg_forest <- randomForest(reg_log~., data = reg_train,
                              ntree = reg_parameters[reg_parameters$compound == comp, 'ntree'],
-                             mtry = reg_parameters[reg_parameters$compound == comp, 'mtry'], 
+                             mtry = reg_parameters[reg_parameters$compound == comp, 'mtry'],
                              nodesize = reg_parameters[reg_parameters$compound == comp, 'nodesize'],
                              importance = TRUE)
-  
+
   outbag_predictions <- reg_forest %>% predict(reg_test)
   test.err <- mean((reg_test$reg_log - outbag_predictions)^2)
   # test.err <- with(reg_test, mean((log(reg_test$reg) - outbag_predictions)^2))
@@ -94,7 +94,7 @@ for (comp in compounds) {
 
 # Save --------------------------------------------------------------------
 
-saveRDS(compounds_forest, '../../models/compounds_forest01052021.rds')
+saveRDS(compounds_forest, '../../models/compounds_forest01192021.rds')
 
 
 

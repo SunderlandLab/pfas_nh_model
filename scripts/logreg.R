@@ -7,7 +7,7 @@ library(MASS)
 library(InformationValue)
 # Load --------------------------------------------------------------------
 
-compounds_data <- readRDS('../../modeling_data/compounds_data01052021.rds')
+compounds_data <- readRDS('../../modeling_data/compounds_data01192021.rds')
 
 
 # Model -------------------------------------------------------------------
@@ -17,19 +17,28 @@ compounds_data <- readRDS('../../modeling_data/compounds_data01052021.rds')
 # - Each list contains 1) model object; 2) training data; 3) test data; 4) predicted classes
 
 compounds_logreg_alt <- map(compounds_data, function(data) {
-  set.seed(99)
+  set.seed(123)
   #set.seed(123)
-  # drop station ID, reg, and impact3 (counts)
+  # drop station ID, reg
   data<-data %>%
-    dplyr::select(-c(StationID, reg, matches("2$")))
+    dplyr::select(-c(StationID, reg)) #%>%
+    #mutate(ImpactOI = ImpactOI + ImpactS + ImpactPr) %>%
+    #dplyr::select(-c(ImpactS, ImpactPr))
+    #add in risk score from Guelfo et al EHP 2018 https://ehp.niehs.nih.gov/doi/full/10.1289/EHP2727
+    # mutate(ImpactS = 50*ImpactS,
+    #        ImpactPr = 50*ImpactPr,
+    #        ImpactOI = 25*ImpactOI,
+    #        ImpactM = 25*ImpactM,
+    #        ImpactW = 100*ImpactW,
+    #        ImpactA = 75*ImpactA,
+    #        ImpactAFFF = 100*ImpactAFFF,
+    #        ImpactPl = 50*ImpactPl,
+    #        ImpactT = 50*ImpactT)
   # Divide into training and test sets, 70-30%
   p <- sample(nrow(data),floor(0.7*nrow(data)))
-  #p <- data$final %>% createDataPartition(p = 0.7, list = F)
   train_data <- data[p, ]
   test_data <- data[-p, ]
-  #train_data <- data[p, -c(6:11)] for env factors only
-  #test_data <- data[-p,-c(6:11) ]
-  # Save model after stepwise regression, remove 'StationID' & 'reg' columns before fit
+  # Save model after stepwise regression
   model <- glm(final ~ ., data = train_data, family = binomial(link = "logit")) %>% 
     stepAIC(trace = FALSE, direction = "both")
   # Predict classes
@@ -39,7 +48,7 @@ compounds_logreg_alt <- map(compounds_data, function(data) {
   #print(optCutOff)
   #sensitivity(test_data$final, probabilities, threshold = optCutOff)
   #specificity(test_data$final, probabilities, threshold = optCutOff)
-  print(DescTools::VIF(model))
+  #print(DescTools::VIF(model))
   predicted_classes <- ifelse(probabilities > optCutOff, 1, 0)
   
   return(list(model, train_data, test_data, predicted_classes) %>% 
@@ -47,4 +56,11 @@ compounds_logreg_alt <- map(compounds_data, function(data) {
 })
 
 # Save --------------------------------------------------------------------
-saveRDS(compounds_logreg_alt, '../../models/compounds_logreg_alt01052021.rds')
+saveRDS(compounds_logreg_alt, '../../models/compounds_logreg_01192021.rds')
+
+# colocation of industries
+
+M<-compounds_data[[1]] %>%
+  dplyr::select(starts_with("Impact")) %>%
+  cor()
+corrplot::corrplot(M, method = "number", type = "lower", diag = F)

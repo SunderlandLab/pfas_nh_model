@@ -9,13 +9,13 @@ p_load("docxtools")
 
 # Load --------------------------------------------------------------------
 
-merged_variables <- readRDS('../../modeling_data/merged_variables01052021.rds')
-unique_ivs <- readRDS('../../modeling_data/unique_ivs01052021.rds')
+merged_variables <- readRDS('../../modeling_data/merged_variables01192021.rds')
+unique_ivs <- readRDS('../../modeling_data/unique_ivs01192021.rds')
 
 
 # Generate separate dataframe for each compound ---------------------------
 
-compounds_data <- list("PFOA", "PFHXA","PFPEA", "PFHPA", "PFOS") %>% set_names()
+compounds_data <- list("PFOA", "PFHXA","PFPEA", "PFHPA", "PFOS", "PFAS") %>% set_names()
 
 for (i in 1:length(compounds_data)) {
   # Extract 'StationID' and compound 'reg' and 'final' columns
@@ -41,7 +41,7 @@ lapply(compounds_data, function(x){
 
 # Save --------------------------------------------------------------------
 
-saveRDS(compounds_data, '../../modeling_data/compounds_data01052021.rds')
+saveRDS(compounds_data, '../../modeling_data/compounds_data01192021.rds')
 
 
 # Table 1

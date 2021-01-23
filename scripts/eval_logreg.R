@@ -6,8 +6,8 @@ library(broom)
 library(stargazer)
 # Load --------------------------------------------------------------------
 
-compounds_data <- readRDS('../../modeling_data/compounds_data01052021.rds')
-compounds_logreg_alt <- readRDS('../../models/compounds_logreg_alt01052021.rds')
+compounds_data <- readRDS('../../modeling_data/compounds_data01192021.rds')
+compounds_logreg_alt <- readRDS('../../models/compounds_logreg_01192021.rds')
 
 # Evaluate models ---------------------------------------------------------
 
@@ -34,9 +34,9 @@ calc_model_performance<-function(x) {
               sens = sens))
 }
 
-
-map_df(sens_spec_tables_alt, calc_model_performance, .id = "compound")%>%
-  write_csv("../../output/sens_spec_alt_logreg_01052021.csv")
+# 
+# map_df(sens_spec_tables_alt, calc_model_performance, .id = "compound")%>%
+#   write_csv("../../output/sens_spec_alt_logreg_01052021.csv")
 
 
 stargazer2 <- function(model, odd.ratio = F, ...) {
@@ -62,12 +62,12 @@ c_stat_ls<-sapply(compounds_logreg_alt,
 stargazer2(lapply(compounds_logreg_alt, function(x){x[["model"]]}), 
            odd.ratio = T, title="Industry impact calculated using counts",
            align=TRUE, type="text",
-           column.labels=c("PFOA","PFHxA","PFPeA","PFHpA","PFOS"),
+           column.labels=c("PFOA","PFHxA","PFPeA","PFHpA","PFOS", "PFAS5"),
            model.numbers=FALSE, keep.stat=c("n","aic"),
            add.lines = list(c("C-Statistics", c_stat_ls)),
            dep.var.labels.include = FALSE, dep.var.caption="",
            star.char = c("*", "**", "***"),
            star.cutoffs = c(.05, .01, .001),
-           out="../../output/logmodel_alt_01052021.txt")
+           out="../../output/logmodel_01192021.txt")
 
 

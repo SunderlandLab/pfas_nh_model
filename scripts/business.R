@@ -9,7 +9,8 @@ library(sp)
 library(sf)
 library(raster)
 library(tmap)
-
+library(geojsonR)
+library(geojsonsf)
 # Load --------------------------------------------------------------------
 
 # read in well locations
@@ -20,7 +21,10 @@ unique_wells <- read.csv("../../raw_data/actual_unique.csv", header = TRUE, sep 
   st_as_sf(coords = c("Longitude", "Latitude")) %>%
   st_set_crs("+proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0") %>%
   st_transform("+proj=utm +zone=18 +datum=WGS84 +units=m")
-
+# NH state outline
+nh_state <- tigris::states(cb=TRUE) %>%
+  filter(NAME == "New Hampshire") %>%
+  st_transform(st_crs(unique_wells))
 #unique_wells %>%
 #  st_write("../../raw_data/unique_wells.shp", append = FALSE)
 
@@ -67,15 +71,16 @@ table(proj_businesses$industry_group, useNA = 'ifany')
 # proj_businesses %>%
 #   st_write("../../raw_data/nh_industry_01042021.shp", append = FALSE)
 
+
 # read in NH business information from FRS, downloaded from https://www.epa.gov/frs/epa-state-combined-csv-download-files
 frs_businesses <- read_csv("../../raw_data/FRS/NH_NAICS_FILE.CSV") %>%
   left_join(read_csv("../../raw_data/FRS/NH_FACILITY_FILE.CSV"), by = "REGISTRY_ID") %>%
   mutate(NAICS = NAICS_CODE,
          CREATE_DATE = lubridate::dmy(CREATE_DATE)) %>%
   filter(CREATE_DATE <= as.Date('2017-10-31'),
-         grepl("^22132|^313|^314110|^314999|^322|^323|^324|^325|^3328|^332999|^3344|^48811|^562|^326|^333318|^333316|^333249|^424690|^442291|^561740", NAICS)) %>%   
+         grepl("^22132|^313|^314110|^314999|^322|^323|^324|^325|^3328|^332999|^3344|^48811|^562|^326|^333318|^333316|^333249|^424690|^442291|^561740", NAICS)) %>%
   distinct(LATITUDE83, LONGITUDE83, .keep_all = T) %>%
-  # create industry group label based on NAICS code 
+  # create industry group label based on NAICS code
   mutate(industry_group = case_when(grepl("^313|^314", NAICS) ~ "T",
                                   grepl("^326", NAICS) ~ "Pl",
                                   grepl("^562|^221", NAICS) ~ "W",
@@ -108,28 +113,71 @@ frs_businesses <- read_csv("../../raw_data/FRS/NH_NAICS_FILE.CSV") %>%
                                      TRUE ~ NA_character_)) %>%
   filter(!is.na(industry_group), !is.na(LATITUDE83), !is.na(LONGITUDE83)) %>%
   dplyr::select(REGISTRY_ID, PRIMARY_NAME,  LATITUDE83, LONGITUDE83, NAICS, industry_group, detailed_industry) %>%
-  st_as_sf(coords = c("LONGITUDE83", "LATITUDE83"), crs = 4269) %>% #NAD83
+  st_as_sf(coords = c("LONGITUDE83", "LATITUDE83"), crs = 4269) #%>% #NAD83
   # transform to be the same CRS as wells
-  st_transform(st_crs(unique_wells)) 
-
-
-table(frs_businesses$detailed_industry, useNA = 'ifany')
-table(frs_businesses$industry_group, useNA = 'ifany')
-# frs_businesses %>%
-#    st_write("../../raw_data/frs_industry_01042021.shp", append = FALSE)
+  #st_transform(st_crs(unique_wells))
+# 
+# 
+# table(frs_businesses$detailed_industry, useNA = 'ifany')
+# table(frs_businesses$industry_group, useNA = 'ifany')
+# # frs_businesses %>%
+# #    st_write("../../raw_data/frs_industry_01042021.shp", append = FALSE)
 
 # ewg sites
-afff_sites <- data.frame("name"=c("New Boston AFM", "Center Strafford Training Site", "Newington", "Pease Air Force Base"), 
-                        'lat' = c(42.94953788784724,  43.27252715038138, 43.100428055835174, 43.080836771144526), 
-                        'long' = c(-71.62159231164273,  -71.12722267231433, -70.83346568498517, -70.80057928425452)) %>%
+afff_sites <- data.frame("CONAME"=c("New Boston AFM", "Center Strafford Training Site", "Newington", "Pease Air Force Base", "AASF Concord"), 
+                         "industry_group" = "Military sites",
+                        'lat' = c(42.94953788784724,  43.27252715038138, 43.100428055835174, 43.080836771144526, 43.21026), 
+                        'long' = c(-71.62159231164273,  -71.12722267231433, -70.83346568498517, -70.80057928425452, -71.51248)) %>%
   st_as_sf(coords = c("long", "lat"), crs = 4269) %>% #NAD83
   # transform to be the same CRS as wells
   st_transform(st_crs(unique_wells)) 
-
 #afff_sites %>%
 #    st_write("../../raw_data/afff_sites_01042021.shp", append = FALSE)
 
+# military and suspected military sites from Bridger
+military_sites <- rgdal::readOGR("../../raw_data/military_sites/Military_2020MARCH04.geojson") %>%
+  st_as_sf()  
 
+# find military sites within NH
+military_sites_in_nh <- military_sites %>%
+  st_join(nh_state, join = st_intersects) %>%
+  filter(!is.na(NAME))
+# turns out these are the same as afff_sites
+
+# suspected military sites 
+military_susp_sites <- rgdal::readOGR("../../raw_data/military_sites/suspected_sites_2020MARCH23.geojson") %>%
+  st_as_sf()
+# find suspected military sites within NH
+military_susp_sites_in_nh <- military_susp_sites %>%
+  st_join(nh_state, join = st_intersects) %>%
+  filter(!is.na(NAME))
+# two sites, and they have the same lat/long, manually add to the afff_sites above.
+
+proj_businesses <- proj_businesses%>%
+  bind_rows(afff_sites)
+# visualize NH industry
+m<-tm_shape(nh_state) +
+  tm_fill() +
+  tm_shape(unique_wells) +
+  tm_dots(col = "white") +
+  tm_shape(proj_businesses) +
+  tm_symbols(col = "industry_group", scale = 0.5) +
+  tm_facets(by=c("industry_group"), ncol  = 3, showNA = F, free.coords= F) +
+  tm_layout(panel.labels = c('Airport','Metal plating', "Military sites",'Other industries','Plastics','Printing', "Semiconductor", "Textile", "Waste management"),
+            legend.show = F,
+            scale = 2)
+tmap::tmap_save(m,"../../output/FigureSX_point_sources_in_NH.png",width = 10,
+       height = 10,
+       units = "in")
+#interactive map
+tmap_mode("view")
+tm <- tm_shape(unique_wells) +
+  tm_dots(col = "white") +
+  tm_shape(frs_businesses %>% filter(industry_group == "A")) +
+  tm_symbols(col = "industry_group", scale = 0.1, alpha = 0.5)
+tm %>%
+  tmap_leaflet() %>%
+  leaflet::hideGroup("industry_group")
 # well location and industry location are used in impact.py
 ewg <- read_csv("../../modeling_data/ewg_impact_huc12.csv")%>%
   set_names(paste0('Impact', names(.))) %>%

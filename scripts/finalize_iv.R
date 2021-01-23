@@ -9,9 +9,16 @@ bedrock <- read.csv("../../raw_data/bedrock_extraction.csv", header = TRUE, sep 
 precip <- read.csv("../../raw_data/precip_PFAS.csv", header = TRUE, sep = ",", na.strings = c("", " ", "NA"))
 recharge <- read.csv("../../raw_data/recharge1122.csv", header = TRUE, sep = ",", na.strings = c("", " ", "NA"))
 # Processed RDS's
-final_industries <- readRDS('../../modeling_data/final_industries01052021.rds')
+final_industries <- readRDS('../../modeling_data/final_industries01192021.rds')
 final_soildata <- readRDS('../../modeling_data/final_soildata1227.rds')
 PFASwells <- readRDS('../../modeling_data/PFASwells.rds')
+PFASwells$PFASreg <- PFASwells %>%
+  dplyr::select(ends_with("reg")) %>%
+  rowSums(na.rm = T)
+PFASwells$PFASfinal <- PFASwells %>%
+  dplyr::select(ends_with("final")) %>%
+  as.matrix() %>%
+  matrixStats::rowMaxs( na.rm = T)
 
 # Remove duplicates and aggregate -----------------------------------------
 
@@ -32,7 +39,7 @@ merged_variables <- Reduce(function(dtf1, dtf2) merge(dtf1, dtf2, by = "StationI
                                 final_soildata, 
                                 unique_bedrock))
 
-indvars <- merged_variables[,c(1,12:length(merged_variables))]
+indvars <- merged_variables[,c(1,14:length(merged_variables))]
 unique_ivs <- unique(indvars)
 
 sapply(unique_ivs, function(x){sum(is.na(x))})
@@ -50,7 +57,7 @@ sapply(unique_ivs, function(x){sum(is.na(x))})
 #replacing with column mean
 #where var is iterating through the precip, recharge, and soil columns
 #soil properties, impute missing as column average
-for (var in c(2:3,16:29)) {
+for (var in c(2:3,9:25)) {
   if (var <= 3)
   {
     avg <- mean(unique_ivs[,var], na.rm = TRUE)
@@ -64,7 +71,7 @@ for (var in c(2:3,16:29)) {
 }
 
 #impact from industry, impute missing as zero
-for(var in c(4:15)) {
+for(var in c(4:8)) {
   unique_ivs[is.na(unique_ivs[,var]), var] <- 0
 }
 # Condense number of categories for categorical variables -----------------
@@ -130,15 +137,16 @@ unique_ivs$hydgrpdcdB <- as.factor(unique_ivs$hydgrpdcdB)
 unique_ivs$hydgrpdcdC <- as.factor(unique_ivs$hydgrpdcdC)
 
 
-
 # Remove unnecessary columns ----------------------------------------------
-# Option 1:
-# (previously unique_ivs <- unique_ivs[,-c(10,12:14,17,21,24:25,32,35,38)])
-#rm <- c("sandtotal_r", "sandco_r", "sandmed_r", "sandfine_r", "siltco_r", "ksat_r", 
-#"ph1to1h2o_r", "aws0_999", "drclassdcdE", "hydgrpdcdA","hydgrpdcdD") 
-rm <- c("sandtotal_r", "sandco_r", "sandmed_r", "sandfine_r", "siltco_r", "ksat_r", 
-        "ph1to1h2o_r", "aws0_999", "drclassdcdW","drclassdcdP","drclassdcdE", "hydgrpdcdB","hydgrpdcdC","hydgrpdcdD") 
-unique_ivs <- unique_ivs[, -which(names(unique_ivs) %in% rm)] 
+rm <- c("sandtotal_r", "sandco_r", "sandmed_r", "sandfine_r", "siltco_r", "ksat_r",
+       "ph1to1h2o_r", "aws0_999", "drclassdcdW","drclassdcdP","drclassdcdE", "hydgrpdcdB","hydgrpdcdC","hydgrpdcdD")
+unique_ivs <- unique_ivs[, -which(names(unique_ivs) %in% rm)]
+
+M<-unique_ivs %>%
+  dplyr::select_if(is.numeric) %>%
+  cor()
+
+corrplot::corrplot(M, method = "number", type = "lower", diag = F)
 
 # Option 2: use total number of industries 
 # (previously unique_ivs <- unique_ivs[,-c(5,7:9,12,16,19:20,27,30,33)])
@@ -149,5 +157,5 @@ unique_ivs <- unique_ivs[, -which(names(unique_ivs) %in% rm)]
 
 # Save --------------------------------------------------------------------
 
-saveRDS(merged_variables, '../../modeling_data/merged_variables01052021.rds')
-saveRDS(unique_ivs, '../../modeling_data/unique_ivs01052021.rds')
+saveRDS(merged_variables, '../../modeling_data/merged_variables01192021.rds')
+saveRDS(unique_ivs, '../../modeling_data/unique_ivs01192021.rds')
