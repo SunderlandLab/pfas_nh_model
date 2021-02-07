@@ -178,8 +178,8 @@ for(i in 1:6){
 
 
 # Variable Importance Plots
-variable_names<- compounds_forest$PFOA$train_data%>%
-  dplyr::select(-final)%>%
+variable_names<- compounds_data$PFOA%>%
+  dplyr::select(-c(StationID, final, reg))%>%
   colnames()
 
 var_imp_df<-map_df(compounds_forest, function(x){importance(x[['forest']], type = 1, scale = FALSE)})
@@ -214,12 +214,20 @@ level_key <- c("ImpactPlastics" = "Industry: Plastics and rubber",
                "brockdepmin" = "Geo: Depth to bedrock",
                "sandtotal_r" = "Soil: Percent total sand",
                "ksat_r" = "Soil: Saturated hydraulic conductivity")
-name_key <- c("PFPeA" = "PFPeA\n\nn:1618\nAcc:79%\nSpe:90%\nSen:49%", 
-              "PFHxA" = "PFHxA\n\nn:1726\nAcc:75%\nSpe:83%\nSen:64%", 
-              "PFHpA" = "PFHpA\n\nn:2221\nAcc:79%\nSpe:86%\nSen:62%", 
-              "PFOA" = "PFOA\n\nn:2377\nAcc:79%\nSpe:61%\nSen:87%", 
-              "PFOS" = "PFOS\n\nn:2376\nAcc:84%\nSpe:94%\nSen:37%",
-              "PFAS" = "PFAS\n\nn:2383\nAcc:82%\nSpe:52%\nSen:93%")
+
+map(compounds_forest, function(x){
+  print(paste("AUC", x$mean_auc %>% round(2), 
+              "LB", x$auc_lb %>% round(2),
+              "UB", x$auc_ub %>% round(2)))
+})
+
+name_key <- c("PFPeA" = "PFPeA\n\nn:1618\nAUROC:0.80\n(0.78, 0.83)", 
+              "PFHxA" = "PFHxA\n\nn:1726\nAUROC:0.80\n(0.77, 0.82)", 
+              "PFHpA" = "PFHpA\n\nn:2221\nAUROC:0.83\n(0.82, 0.84)", 
+              "PFOA" = "PFOA\n\nn:2377\nAUROC:0.82\n(0.80, 0.84)", 
+              "PFOS" = "PFOS\n\nn:2376\nAUROC:0.75\n(0.71, 0.78)",
+              "PFAS" = "PFAS\n\nn:2383\nAUROC:0.82\n(0.81, 0.83)")
+
 ##########################
 #Option 1 facet_grid 2D  #
 ##########################
@@ -248,7 +256,7 @@ var_imp_df%>%
         legend.key.size = unit(1.2, "cm"),
         legend.text = element_text(size = 16),
         legend.position="bottom")
-ggsave("../../output/Figure1_rf_class_var_imp.png",width = 10,
+ggsave("../../output/Figure1_rf_class_var_imp.png",width = 13,
   height = 10,
   units = "in")
 
@@ -295,33 +303,6 @@ tmap_save(m, "../../output/Figure3_pred_vs_obs.png")
 ######################
 # TOC map for PFOA + PFOS #
 ######################
-map_pfoa_pfos <- compounds_data[['PFOA']] %>%
-  left_join(compounds_data[['PFOS']] %>% select(StationID, reg), by = "StationID", suffix = c("_pfoa", "_pfos")) %>%
-  left_join(unique, by = "StationID") %>%
-  mutate(reg = reg_pfoa + reg_pfos,
-         `PFOA + PFOS (ng/L)` =  cut(reg,
-                        breaks=c(0, 10, 15, 30, 70, 53000),
-                        labels=c("< 10", "10 - 15", "15 - 30", "30 - 70","> 70"),
-                        include.lowest=TRUE)) %>%
-  select(StationID, `PFOA + PFOS (ng/L)`, Longitude, Latitude) %>%
-  filter(!is.na(Longitude) & !is.na(Latitude)) %>%
-  st_as_sf(coords = c("Longitude", "Latitude")) %>%
-  st_set_crs("WGS84") 
-
-m2<-tm_shape(nh_map) +
-  tm_polygons(border.col = "white") +
-  tm_shape(map_pfoa_pfos) +
-  tm_bubbles(col = "PFOA + PFOS (ng/L)", 
-             size = 0.3, border.col = "transparent", 
-             alpha = 0.7,
-             palette = "-RdYlGn") + 
-  tm_layout(legend.outside = T,
-            frame = F)
-tmap_save(m2, "../../output/TOC_PFOA_PFOS.png", 
-          width = 4,
-          height = 7,
-          units = "in")
-
 us_map <- tigris::states(cb = TRUE) %>%
   st_as_sf()%>%
   st_transform(2163) %>%

@@ -8,7 +8,7 @@ library(stargazer)
 
 compounds_data <- readRDS('../../modeling_data/compounds_data01232021.rds')
 compounds_logreg <- readRDS('../../models/compounds_logreg_02052021.rds')
-
+compounds_glm <- readRDS("../../models/compounds_glm_02022021.rds")
 # Evaluate models ---------------------------------------------------------
 
 # # Sensitivity and specificity analysis ------------------------------------
@@ -53,45 +53,26 @@ stargazer2 <- function(model, odd.ratio = F, ...) {
   }
 }
 
-
-
-# Impact characterized as the count of industry with exponential decay
-c_stat_ls<-sapply(compounds_logreg_alt, 
+# AUROC
+auroc_ls <- sapply(compounds_glm,
+                   function(x){paste0(x$mean_auc %>% round(2),
+                                     " (",
+                                     x$auc_lb %>% round(2),
+                                     ", ",
+                                     x$auc_ub %>% round(2),
+                                     ")")})
+# C statistics
+c_stat_ls<-sapply(compounds_logreg, 
                   function(x){DescTools::Cstat(x[["model"]])%>%
-                      round(3)})
-
-level_key <- c("ImpactPlastics" = "Industry: Plastics and rubber", 
-               "recharge" = "Hydro: Groundwater recharge",
-               "precip" = "Hydro: Monthly precipitation",
-               "ImpactTextile" = "Industry: Textiles manufacturing",
-               "silttotal_r" = "Soil: Percent total silt",
-               "cec7_r" = "Soil: Cation exchange capacity",
-               "claytotal_r" = "Soil: Percent total clay",
-               "slopegradwta" = "Hydro: Slope gradient",
-               #"ImpactPr" = "Industry: Printing industry",
-               "soc0_999" = "Soil: Organic carbon",
-               "dbthirdbar_r" = "Soil: Bulk density",
-               "awc_r" = "Soil: Available water capacity",
-               "ImpactOI" = "Industry: Other",
-               "ImpactAirports" = "Industry: Airports",
-               "ImpactWWTP" = "Industry: Wastewater treatment plant",
-               "ImpactMilitary" = "Industry: Military AFFF",
-               #"ImpactM" = "Industry: Metal plating",
-               "hzdep" = "Soil: Thickness of soil horizon",
-               "bedrock_M" = "Geo: Bedrock type",
-               "hydgrpdcdA" = "Hydro: Low runoff potential",
-               #"ImpactS" = "Industry: Semiconductor manufacturing",
-               "wtdepannmin" = "Hydro: Depth to water table",
-               "brockdepmin" = "Geo: Depth to bedrock",
-               "sandtotal_r" = "Soil: Percent total sand",
-               "ksat_r" = "Soil: Saturated hydraulic conductivity")
+                      round(2)})
 
 stargazer2(lapply(compounds_logreg, function(x){x[["model"]]}), 
            odd.ratio = T, title="",
            align=TRUE, type="text",
            column.labels=c("PFOA","PFHxA","PFPeA","PFHpA","PFOS", "PFAS5"),
            model.numbers=FALSE, keep.stat=c("n","aic"),
-           add.lines = list(c("C-Statistics", c_stat_ls)),
+           add.lines = list(c("C-Statistics", c_stat_ls),
+                            c("AUROC", auroc_ls)),
            dep.var.labels.include = FALSE, dep.var.caption="",
            star.char = c("*", "**", "***"),
            star.cutoffs = c(.05, .01, .001),

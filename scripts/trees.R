@@ -66,21 +66,12 @@ for (comp in compounds) {
   # 95% CI
   auc_lb <- mean_auc - 1.96 * se_auc
   auc_ub <- mean_auc + 1.96 * se_auc
-  # #Forest 2: Regression; only with detects, log transform
-  # set.seed(123)
-  # reg <- compounds_data[[comp]][compounds_data[[comp]]$final == 1, ]%>%
-  #   mutate(reg_log = log(reg))%>%
-  #   dplyr::select(-c(StationID, reg, final))
-  # 
-  # ids <- sample(0.7*nrow(reg))
-  # reg_train <- reg[ids,]
-  # reg_test <- reg[-ids,]
-  # 
-  # reg_forest <- randomForest(reg_log~., data = reg_train,
-  #                            ntree = reg_parameters[reg_parameters$compound == comp, 'ntree'],
-  #                            mtry = reg_parameters[reg_parameters$compound == comp, 'mtry'],
-  #                            nodesize = reg_parameters[reg_parameters$compound == comp, 'nodesize'],
-  #                            importance = TRUE)
+  # random forest classification model
+  forest <- randomForest(final~., data = data,
+                         ntree = reg_parameters[reg_parameters$compound == comp, 'ntree'],
+                         mtry = reg_parameters[reg_parameters$compound == comp, 'mtry'],
+                         nodesize = reg_parameters[reg_parameters$compound == comp, 'nodesize'],
+                         importance = TRUE)
   # 
   # outbag_predictions <- reg_forest %>% predict(reg_test)
   # test.err <- mean((reg_test$reg_log - outbag_predictions)^2)
@@ -88,7 +79,7 @@ for (comp in compounds) {
   # test.rsq <- 1-(test.err/var(reg_test$reg_log))
   
   compounds_forest[[comp]] <- 
-    list(#forest = forest, 
+    list(forest = forest, 
          #reg_forest = reg_forest, 
          #train_data = clist[['train_data']], 
          #test_data = clist[['test_data']], 
