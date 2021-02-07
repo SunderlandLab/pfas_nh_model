@@ -13,9 +13,9 @@ library(ggthemes)
 options(scipen=999)
 # Load --------------------------------------------------------------------
 
-compounds_forest <- readRDS('../../models/compounds_forest01192021.rds')
-compounds_data <- readRDS('../../modeling_data/compounds_data01192021.rds')
-
+compounds_forest <- readRDS('../../models/compounds_forest02022021.rds')
+compounds_data <- readRDS('../../modeling_data/compounds_data01232021.rds')
+compounds_glm <- readRDS("../../modeling_data/compounds_glm_02022021.rds")
 # compounds_data %>%
 #   map(function(x){
 #     x %>% 
@@ -27,7 +27,7 @@ compounds_data <- readRDS('../../modeling_data/compounds_data01192021.rds')
 # Tune model --------------------------------------------------------------
 # Determine which combo minimizes error and maximizes predictive accuracy
 # TAKES A LONG TIME TO RUN
-
+# 
 # compounds <- names(compounds_forest)
 # 
 # tuned_models <- list()
@@ -40,7 +40,7 @@ compounds_data <- readRDS('../../modeling_data/compounds_data01192021.rds')
 #                                   "predictive accuracy" = rep(0,(num_vars - 4)*10))
 #   error_table <- data.frame("tree.index" = c(1:ntrees))
 #   tracker <- 1
-#   for (i in 1:15) {
+#   for (i in 1:(num_vars - 4)) {
 #     for (j in 1:10) {
 #       mt <- i + 4 # Because starting at 5, not 1
 #       model <- randomForest(form,
@@ -64,27 +64,117 @@ compounds_data <- readRDS('../../modeling_data/compounds_data01192021.rds')
 #                    error_table = error_table)
 #   }
 # }
-#
-#saveRDS(tuned_models, '../../models_forest_eval/tuned_models01192021.rds')
-#
+# 
+# saveRDS(tuned_models, '../../models_forest_eval/tuned_models01252021.rds')
+# 
 # for (comp in compounds) {
 #   print(comp)
 #   index <- which.max(tuned_models[[comp]]$predictions_table$predictive.accuracy)
 #   print(tuned_models[[comp]]$predictions_table[index,])
 # }
 
+# Tune random forest regression model
+# 
+# tuned_reg_models <- list()
+# for (comp in compounds) {
+#   ntrees <- 500
+#   # limit to wells with detectable levels
+#   reg <- compounds_data[[comp]][compounds_data[[comp]]$final == 1, ]%>%
+#     mutate(reg_log = log(reg))%>%
+#     dplyr::select(-c(StationID, reg, final))
+#   set.seed(123)
+#   ids <- sample(0.7*nrow(reg))
+#   reg_train <- reg[ids,]
+#   reg_test <- reg[-ids,]
+#   form <- as.formula("reg_log~.")
+#   num_vars <- ncol(reg)
+#   predictions_table <- data.frame("mtry" = rep(0,(num_vars - 4)*10),
+#                                   "nodesize" = rep(0,(num_vars - 4)*10),
+#                                   "RMSE" = rep(0,(num_vars - 4)*10))
+#   error_table <- data.frame("tree.index" = c(1:ntrees))
+#   tracker <- 1
+#   for (i in 1:(num_vars - 4)) {
+#     for (j in 1:10) {
+#       mt <- i + 4 # Because starting at 5, not 1
+#       model <- randomForest(form,
+#                      data = reg_train,
+#                      mtry = mt,
+#                      ntree = ntrees,
+#                      nodesize = j,
+#                      importance = TRUE)
+#       error_table <- cbind(error_table, model$mse)
+#       col_name <- paste0("m",i,"ns",j)
+#       print(col_name)
+#       names(error_table)[tracker + 1] <- col_name
+#       predictions <- model %>% predict(reg_test)
+#       predictions_table[tracker, 1] <- mt
+#       predictions_table[tracker, 2] <- j
+#       predictions_table[tracker, 3] <- RMSE(predictions, reg_test$reg_log)
+#       print(tracker)
+#       tracker <- tracker + 1
+#     }
+#     tuned_reg_models[[comp]] <- list(predictions_table = predictions_table,
+#                    error_table = error_table)
+#   }
+# }
+# 
+# saveRDS(tuned_reg_models, '../../models_forest_eval/tuned_reg_models02012021.rds')
+# 
+# for (comp in compounds) {
+#   print(comp)
+#   index <- which.min(tuned_reg_models[[comp]]$predictions_table$RMSE)
+#   print(tuned_reg_models[[comp]]$predictions_table[index,])
+# }
+
 
 # Sensitivity and specificity analysis ------------------------------------
 
-sens_spec_tablesf <- map(compounds_forest, function(clist) {
-  predicted_classes <- clist[['predictions']]
-  observed_classes <- clist[['test_data']]$final
-  print(mean(predicted_classes == observed_classes))
-  return(table(predicted_classes, observed_classes))
-})
+# sens_spec_tablesf <- map(compounds_forest, function(clist) {
+#   predicted_classes <- clist[['predictions']]
+#   observed_classes <- clist[['test_data']]$final
+#   print(mean(predicted_classes == observed_classes))
+#   return(table(predicted_classes, observed_classes))
+# })
+# 
+# map_df(sens_spec_tablesf, calc_model_performance, .id = "compound")%>%
+#  write_csv("../../output/sens_spec_alt_rf_02022021.csv")
 
-map_df(sens_spec_tablesf, calc_model_performance, .id = "compound")%>%
- write_csv("../../output/sens_spec_alt_rf_01192021.csv")
+# ROC curve and confidence interval
+compounds <- names(compounds_data)
+cols <- RColorBrewer::brewer.pal(12,'Paired')
+# no.11 is light yellow
+cols[11] <- "#E6AB02"
+par(mfrow = c(2,3))
+for(i in 1:6){
+  comp <- compounds[i]
+  perf.rf <- compounds_forest[[comp]]$perf.rf
+  perf.glm <- compounds_glm[[comp]]$perf.glm
+  #mean_auc <- compounds_forest[[comp]]$mean_auc
+  #auc_lb <- compounds_forest[[comp]]$auc_lb
+  #auc_ub <- compounds_forest[[comp]]$auc_ub
+  #corret the lower/upper case in PFAS names
+  comp <- case_when(comp == "PFPEA" ~ "PFPeA",
+                    comp == "PFHPA" ~ "PFHpA",
+                    comp == "PFHXA" ~ "PFHxA",
+                    TRUE ~ comp)
+  plot(perf.rf, lty=3, col=cols[2*i-1], main=paste("RF and LR for prediction of\n", comp, "detection"))
+  plot(perf.glm, lty=3, col=cols[2*i], add = TRUE)
+  plot(perf.rf, avg="vertical", lwd=3, col = cols[2*i-1],
+       spread.estimate="stderror", plotCI.lwd=2, add=TRUE)
+  plot(perf.glm, avg="vertical", lwd=3, col = cols[2*i],
+       spread.estimate="stderror", plotCI.lwd=2, add=TRUE)
+  legend(0.7, 0.3 ,c('RF','LR'),col=c(cols[2*i-1], cols[2*i]), lwd=3)
+  
+  #abline(h = 0.8, color = "black", add = TRUE, lty =3)
+  # legend(0.5, 0.2, 
+  #        paste0("AUC: ", mean_auc %>% round(2),
+  #               '\n',
+  #               "95% CI: (", auc_lb %>% round(2),
+  #               ", ",  auc_ub %>% round(2), ")"),
+  #        x.intersp = -0.2,
+  #        adj = c(0, 0.2))
+  
+}
 
 
 # Variable Importance Plots
@@ -99,10 +189,10 @@ var_imp_df <- var_imp_df%>%
          PFPeA = PFPEA,
          PFHpA = PFHPA) %>%
   dplyr::select(-c(PFHXA, PFPEA, PFHPA))
-level_key <- c("ImpactPl" = "Industry: Plastics and rubber", 
+level_key <- c("ImpactPlastics" = "Industry: Plastics and rubber", 
                "recharge" = "Hydro: Groundwater recharge",
                "precip" = "Hydro: Monthly precipitation",
-               "ImpactT" = "Industry: Textiles manufacturing",
+               "ImpactTextile" = "Industry: Textiles manufacturing",
                "silttotal_r" = "Soil: Percent total silt",
                "cec7_r" = "Soil: Cation exchange capacity",
                "claytotal_r" = "Soil: Percent total clay",
@@ -111,7 +201,7 @@ level_key <- c("ImpactPl" = "Industry: Plastics and rubber",
                "soc0_999" = "Soil: Organic carbon",
                "dbthirdbar_r" = "Soil: Bulk density",
                "awc_r" = "Soil: Available water capacity",
-               #"ImpactOI" = "Industry: Other",
+               "ImpactOI" = "Industry: Other",
                "ImpactAirports" = "Industry: Airports",
                "ImpactWWTP" = "Industry: Wastewater treatment plant",
                "ImpactMilitary" = "Industry: Military AFFF",
@@ -121,13 +211,15 @@ level_key <- c("ImpactPl" = "Industry: Plastics and rubber",
                "hydgrpdcdA" = "Hydro: Low runoff potential",
                #"ImpactS" = "Industry: Semiconductor manufacturing",
                "wtdepannmin" = "Hydro: Depth to water table",
-               "brockdepmin" = "Geo: Depth to bedrock")
-name_key <- c("PFPeA" = "PFPeA\n\nn:1618\nAcc:77%\nSpe:89%\nSen:47%", 
-              "PFHxA" = "PFHxA\n\nn:1726\nAcc:74%\nSpe:82%\nSen:63%", 
-              "PFHpA" = "PFHpA\n\nn:2221\nAcc:78%\nSpe:86%\nSen:63%", 
-              "PFOA" = "PFOA\n\nn:2377\nAcc:79%\nSpe:58%\nSen:89%", 
-              "PFOS" = "PFOS\n\nn:2376\nAcc:84%\nSpe:96%\nSen:31%",
-              "PFAS" = "PFAS\n\nn:2383\nAcc:82%\nSpe:56%\nSen:91%")
+               "brockdepmin" = "Geo: Depth to bedrock",
+               "sandtotal_r" = "Soil: Percent total sand",
+               "ksat_r" = "Soil: Saturated hydraulic conductivity")
+name_key <- c("PFPeA" = "PFPeA\n\nn:1618\nAcc:79%\nSpe:90%\nSen:49%", 
+              "PFHxA" = "PFHxA\n\nn:1726\nAcc:75%\nSpe:83%\nSen:64%", 
+              "PFHpA" = "PFHpA\n\nn:2221\nAcc:79%\nSpe:86%\nSen:62%", 
+              "PFOA" = "PFOA\n\nn:2377\nAcc:79%\nSpe:61%\nSen:87%", 
+              "PFOS" = "PFOS\n\nn:2376\nAcc:84%\nSpe:94%\nSen:37%",
+              "PFAS" = "PFAS\n\nn:2383\nAcc:82%\nSpe:52%\nSen:93%")
 ##########################
 #Option 1 facet_grid 2D  #
 ##########################
@@ -159,33 +251,6 @@ var_imp_df%>%
 ggsave("../../output/Figure1_rf_class_var_imp.png",width = 10,
   height = 10,
   units = "in")
-
-##########################
-#Option 2 facet_wrap 1D  #
-##########################
-# var_imp_df%>%
-#   mutate(variable = recode(variable, !!!level_key)) %>%
-#   pivot_longer(-variable) %>%
-#   ggplot(aes(x= reorder(variable, value), 
-#              y=value, fill = value)) +
-#   geom_bar(stat = "identity", color = "grey50") +
-#   scale_fill_viridis() +
-#   coord_flip() +
-#   facet_wrap(vars(name), scales = "free_x") +
-#   xlab("")+
-#   ylab("Mean Decrease in Accuracy") +
-#   theme_classic() + 
-#   theme(text = element_text(size=14),
-#         axis.text.x = element_text(angle = 45, hjust = 1),
-#         legend.title = element_blank(),
-#         legend.key.size = unit(0.75, "cm"),
-#         legend.position="top")
-# ggsave("../../output/Figure2_rf_class_var_imp_v2.png")
-# 
-# Save --------------------------------------------------------------------
-
-#saveRDS(tuned_models, '../../models_forest_eval/tuned_models1207.rds')
-#saveRDS(sens_spec_tablesf, '../../models_forest_eval/sens_spec_tablesf1207.rds')
 
 ######################
 # Figure 3 test PFOA #

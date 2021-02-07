@@ -19,7 +19,7 @@ url = r'https://nationalmap.gov/epqs/pqs.php?'
 HUC_level=12 #choose either 10 or 12
 
 ##Load sources and sinks
-industry=gpd.read_file('../raw_data/nh_ucmr_01192021.shp') #epsg=32618
+industry=gpd.read_file('../raw_data/nh_ucmr_01232021.shp') #epsg=32618
 #frs=gpd.read_file('../raw_data/frs_industry_01042021.shp') #epsg=32618
 #ewg = gpd.read_file('../raw_data/afff_sites_01042021.shp') #epsg=32618
 well=gpd.read_file('../raw_data/unique_wells.shp') #epsg=32618
@@ -48,6 +48,7 @@ for lat,lon in zip(industryy,industryx):
 np.savetxt('../modeling_data/elevation/industry_elevations.txt',source_elevation)
 source_elevation=np.loadtxt('../modeling_data/elevation/industry_elevations.txt')
 # source_elevation=[]
+
 # for lat,lon in zip(frsy,frsx):
 #     source_params={'output':'json','x':lon,'y':lat,'units':'Meters'}
 #     source_result=requests.get((url + urllib.parse.urlencode(source_params)))

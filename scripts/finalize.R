@@ -9,8 +9,8 @@ p_load("docxtools")
 
 # Load --------------------------------------------------------------------
 
-merged_variables <- readRDS('../../modeling_data/merged_variables01192021.rds')
-unique_ivs <- readRDS('../../modeling_data/unique_ivs01192021.rds')
+merged_variables <- readRDS('../../modeling_data/merged_variables01232021.rds')
+unique_ivs <- readRDS('../../modeling_data/unique_ivs01232021.rds')
 
 
 # Generate separate dataframe for each compound ---------------------------
@@ -41,18 +41,18 @@ lapply(compounds_data, function(x){
 
 # Save --------------------------------------------------------------------
 
-saveRDS(compounds_data, '../../modeling_data/compounds_data01192021.rds')
+saveRDS(compounds_data, '../../modeling_data/compounds_data01232021.rds')
 
 
 # Table 1
-compounds_data <- readRDS('../../modeling_data/compounds_data01052021.rds')
+compounds_data <- readRDS('../../modeling_data/compounds_data01232021.rds')
 
 compounds_data_addflag<- map(compounds_data, function(data) {
   set.seed(99)
   #set.seed(123)
   # drop station ID, final, and impact2 (sales volume)
   data<-data %>%
-    dplyr::select(-c(StationID, final, matches("2$")))
+    dplyr::select(-c(StationID, final))
   # Divide into training and test sets, 70-30%
   p <- sample(nrow(data),floor(0.7*nrow(data)))
   #p <- data$final %>% createDataPartition(p = 0.7, list = F)

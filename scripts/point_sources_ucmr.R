@@ -44,16 +44,29 @@ airport_nh <- find_within_nh("Airports139")%>%
 # confirm there are 2 part 139 airports in NH using FAA data
 # https://www.faa.gov/airports/airport_safety/part139_cert/
 
-wwtp_nh <- find_within_nh("WWTP8k") %>%
-    mutate(industry_group = "WWTP",
-           ID = as.character(ID)) %>%
-    dplyr::select(ID, geometry, industry_group)
-#interactive map
-# tmap_mode("view")
-# tm <-tm_shape(wwtp_nh) +
-#     tm_symbols(col = "red", scale = 0.1, alpha = 0.5) 
-# tm %>%
-#     tmap_leaflet() 
+# WWTP from Xianming
+wwtp_nh <- readxl::read_excel("../../raw_data/PFOSEmissionEstimation_WWTP_USA.xlsx") %>%
+  st_as_sf(coords = c("LONGITUDE", "LATITUDE"), crs = 4269) %>%
+  st_join(nh_state, join = st_intersects) %>%
+  filter(!is.na(NAME)) %>%
+  mutate(industry_group = "WWTP",
+         ID = FACILITY_NAME)%>%
+  dplyr::select(ID, geometry, industry_group)
+
+
+# wwtp_url <- "https://opendata.arcgis.com/datasets/4b9bac25263047c19e617d7bd7b30701_0.geojson"
+# wwtp_sf <- rgdal::readOGR(wwtp_url) %>%
+#   st_as_sf()
+# wwtp_nh <- wwtp_sf %>%
+#   filter(CWP_STATE == "NH") %>%
+#   distinct(geometry, .keep_all = T)
+# 14 WWTP from this list
+
+# cwns_nh <- read_csv("../../raw_data/cwns_nh_facility_details.csv") %>%
+#   mutate(flag = if_else(`Permit Number` %in% wwtp_nh$NPDES_ID, 1, 0) %>% factor(),
+#          pop = as.numeric(gsub(",", "", `Projected Residential Total Receiving Treatment Population`))) 
+# 88 WWTP from CWNS
+
 
 dod_nh <- find_within_nh("DoD268")
 # check with EWG list, this is not as complete, use EWG instead
@@ -64,9 +77,31 @@ dod_nh <- data.frame("ID"=c("New Boston AFM", "Center Strafford Training Site", 
                          'long' = c(-71.62159231164273,  -71.12722267231433, -70.83346568498517, -70.80057928425452, -71.51248)) %>%
     st_as_sf(coords = c("long", "lat"), crs = 4269) 
 
+
+# read in NH business information from FRS, downloaded from https://www.epa.gov/frs/epa-state-combined-csv-download-files
+frs_businesses <- read_csv("../../raw_data/FRS/NH_NAICS_FILE.CSV") %>%
+  left_join(read_csv("../../raw_data/FRS/NH_FACILITY_FILE.CSV"), by = "REGISTRY_ID") %>%
+  mutate(NAICS = NAICS_CODE,
+         CREATE_DATE = lubridate::dmy(CREATE_DATE)) %>%
+  filter(CREATE_DATE <= as.Date('2017-10-31'),
+         grepl("^313|^322|^323|^324|^3255|^32591|^3328|^3344", NAICS)) %>%
+  distinct(LATITUDE83, LONGITUDE83, .keep_all = T) %>%
+  # create industry group label based on NAICS code
+  mutate(industry_group = case_when(grepl("^313", NAICS) ~ "T",
+                                    grepl("^322|^323", NAICS) ~ "Pr",
+                                    grepl("^3344", NAICS) ~ "S",
+                                    grepl("^3328", NAICS) ~ "M",
+                                    TRUE ~ "OI")) %>%
+  filter(!is.na(industry_group), !is.na(LATITUDE83), !is.na(LONGITUDE83)) %>%
+  st_as_sf(coords = c("LONGITUDE83", "LATITUDE83"), crs = 4269) %>%
+  #as_Spatial()%>%
+  dplyr::select(ID = "PRIMARY_NAME", industry_group, geometry)
+#frs_businesses %>% 
+#  writeOGR("../../raw_data", layer = "frs", driver = "ESRI Shapefile")
 #combine point sources and write out
-bind_rows(airport_nh, wwtp_nh, dod_nh) %>%
-    st_write("../../raw_data/nh_ucmr_01192021.shp", append = FALSE)
+bind_rows(airport_nh, wwtp_nh, dod_nh, frs_businesses) %>%
+  st_write("../../raw_data/nh_ucmr_01232021.shp", append = FALSE)
+
 
 #impact.py
 
@@ -94,8 +129,8 @@ SG_wells <- st_join(unique_wells, SG_buffer10km, join = st_intersects) %>%
 SG_distances <- st_distance(SG_wells, SG)
 SG_wells<- cbind(SG_wells,SG_distances) %>%
     mutate(SG_distances = as.numeric(SG_distances)) %>%
-    mutate(ImpactPl = 1/exp(SG_distances/1000)) %>%
-    dplyr::select(StationID, ImpactPl)
+    mutate(ImpactPlastics = 1/exp(SG_distances/1000)) %>%
+    dplyr::select(StationID, ImpactPlastics)
 
 # TCI
 TCI <- proj_businesses%>%
@@ -107,14 +142,14 @@ TCI_wells <- st_join(unique_wells, TCI_buffer10km, join = st_intersects) %>%
 TCI_distances <- st_distance(TCI_wells, TCI)
 TCI_wells<- cbind(TCI_wells,TCI_distances) %>%
     mutate(TCI_distances = as.numeric(TCI_distances)) %>%
-    mutate(ImpactT = 1/exp(TCI_distances/1000)) %>%
-    dplyr::select(StationID, ImpactT)
+    mutate(ImpactTextile = 1/exp(TCI_distances/1000)) %>%
+    dplyr::select(StationID, ImpactTextile)
 
 # Merge -------------------------------------------------------------------
 final_industries <- impact %>%
-    left_join(SG_wells %>% st_drop_geometry(), by = "StationID") %>%
-    left_join(TCI_wells %>% st_drop_geometry(), by = "StationID") %>%
-    mutate_all(funs(replace_na(.,0)))
+  left_join(TCI_wells %>% st_drop_geometry(), by = "StationID") %>%
+  left_join(SG_wells %>% st_drop_geometry(), by = "StationID") %>%
+  mutate_all(funs(replace_na(.,0)))
 
 final_industries%>%
       pivot_longer(-StationID) %>%
@@ -124,23 +159,24 @@ final_industries%>%
                 prop = n/n())
     
 # Save --------------------------------------------------------------------
-saveRDS(final_industries, '../../modeling_data/final_industries01192021.rds')
+saveRDS(final_industries, '../../modeling_data/final_industries01232021.rds')
 
 # visualize point sources
-industries_nh<-bind_rows(airport_nh, wwtp_nh, dod_nh,
+industries_nh<-bind_rows(airport_nh, wwtp_nh, dod_nh, frs_businesses,
           proj_businesses%>%
             filter(CONAME == "TEXTILES COATED INC") %>%
-            mutate(industry_group = "Textile") %>%
+            mutate(industry_group = "Textiles") %>%
             dplyr::select(ID = CONAME, industry_group, geometry) %>%
             st_transform(st_crs(airport_nh)),
           proj_businesses%>%
             filter(CONAME == "SAINT-GOBAIN PERFORMANCE PLSTC")  %>%
             mutate(industry_group = "Plastics") %>%
             dplyr::select(ID = CONAME, industry_group, geometry) %>%
-            st_transform(st_crs(airport_nh))
-)
+            st_transform(st_crs(airport_nh)) 
+          ) %>%
+  mutate(industry_group = if_else(industry_group %in% c("M", "OI", "Pr", "S", "T"), "Other industries", industry_group))
   
-  
+tmap_mode("plot")
 m<-tm_shape(nh_state) +
   tm_fill() +
   tm_shape(unique_wells) +

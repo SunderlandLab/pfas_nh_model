@@ -6,95 +6,106 @@ library(randomForest)
 library(caret)
 library(tidyverse)
 library(reshape2)
+library(pROC)
 
 # Load --------------------------------------------------------------------
 
-compounds_data <- readRDS('../../modeling_data/compounds_data01192021.rds')
-compounds_logreg_alt <- readRDS('../../models/compounds_logreg_01192021.rds')
-
-# Model -------------------------------------------------------------------
-# Uses the same train and test sets as logistic regression
-
-# A list of 5 lists (1 per compound)
-# - Each list contains 1) full RF; 2) detects only RF; 3) test data; 4) train data; 
-#     5) forest predictions; 6) outbag_predictions; 7) test_err
-
-#03/24/19 tuning results: 
-#      Classification | Regression
-#        mtry  ns  %     mtry  ns MSE
-#PFOA:  15, 3, 80.39;  7, 5, 1.1427
-#PFHXA: 21, 7, 75.48;  6, 1, 0.6847
-#PFPEA:  9,10, 79.22; 14, 7, 0.9285
-#PFHPA: 13, 8, 80.36; 15, 8, 0.6723
-#PFOS:  10, 7, 83.87; 14, 9, 0.9769
-
-#old:  mtry = c(8, 23, 22, 5, 9), nodesize = c(3, 6, 6, 10, 7)) for classification, mtry = c(9, 13, 17, 22, 17), nodesize = c(4, 10, 10, 10, 8)) for regression
+compounds_data <- readRDS('../../modeling_data/compounds_data01232021.rds')
+#compounds_logreg_alt <- readRDS('../../models/compounds_logreg_01232021.rds')
 
 compounds <- names(compounds_data)
 parameters <- data.frame(compound = c("PFOA","PFHXA","PFPEA","PFHPA","PFOS", "PFAS"),
                          ntree = c(1000, 1000, 1000, 1000, 1000, 1000),
-                         mtry = c(14, 18, 19, 11, 6, 11),
-                         nodesize = c(8, 10, 3, 8, 3, 2))
+                         mtry = c(10, 16, 6, 10, 22, 17),
+                         nodesize = c(2, 9, 4, 4, 5, 6))
 
 reg_parameters <- data.frame(compound = c("PFOA","PFHXA","PFPEA","PFHPA","PFOS", "PFAS"),
                             ntree = c(500, 500, 500, 500, 500, 500),
-                            mtry = c(7, 6, 14, 15, 14, 5),
-                            nodesize = c(5, 1, 7, 8, 9, 1))
+                            mtry = c(5, 5, 9, 5, 6, 5),
+                            nodesize = c(2, 9, 5, 5, 4, 3))
+
 
 compounds_forest <- list()
 for (comp in compounds) {
-  clist <- compounds_logreg_alt[[comp]]
+  # remove stationID and continous outcome
+  data <- compounds_data[[comp]] %>%
+    dplyr::select(-c(StationID, reg))
   # Forest 1: Classification
   set.seed(123)
-  # (Following line included only to replicate previous results)
-  x <- compounds_data[[comp]]$final %>% createDataPartition(p = 0.7, list = FALSE) 
-  forest <- randomForest(final~., data = clist[['train_data']], 
-                         ntree = parameters[parameters$compound == comp, 'ntree'],
-                         mtry = parameters[parameters$compound == comp, 'mtry'], 
-                         nodesize = parameters[parameters$compound == comp, 'nodesize'], 
-                         importance = TRUE)
-  predictions <- forest %>% predict(clist[['test_data']], type = "class")
+  # 10 fold validation
+  # Helper functions -----------------------------------------------------------
+  .cvFolds <- function(Y, V){  #Create CV folds (stratify by outcome)
+    Y0 <- split(sample(which(Y==0)), rep(1:V, length=length(which(Y==0))))
+    Y1 <- split(sample(which(Y==1)), rep(1:V, length=length(which(Y==1))))
+    folds <- vector("list", length=V)
+    for (v in seq(V)) {folds[[v]] <- c(Y0[[v]], Y1[[v]])}		
+    return(folds)
+  }
   
-  forest_correct <- predictions == clist[['test_data']]$final
-  forest_correct <- as.numeric(forest_correct)
-
-  #Forest 2: Regression; only with detects, log transform
-  set.seed(123)
-  reg <- compounds_data[[comp]][compounds_data[[comp]]$final == 1, ]%>%
-    mutate(reg_log = log(reg))%>%
-    dplyr::select(-c(StationID, reg, final))
-
-  ids <- sample(0.7*nrow(reg))
-  reg_train <- reg[ids,]
-  reg_test <- reg[-ids,]
-
-  reg_forest <- randomForest(reg_log~., data = reg_train,
-                             ntree = reg_parameters[reg_parameters$compound == comp, 'ntree'],
-                             mtry = reg_parameters[reg_parameters$compound == comp, 'mtry'],
-                             nodesize = reg_parameters[reg_parameters$compound == comp, 'nodesize'],
-                             importance = TRUE)
-
-  outbag_predictions <- reg_forest %>% predict(reg_test)
-  test.err <- mean((reg_test$reg_log - outbag_predictions)^2)
-  # test.err <- with(reg_test, mean((log(reg_test$reg) - outbag_predictions)^2))
-  test.rsq <- 1-(test.err/var(reg_test$reg_log))
+  .doFit <- function(v, folds, data){  #Train/test RF for each fold
+    fit <- randomForest(final~., data=data[-folds[[v]],], 
+                        ntree = parameters[parameters$compound == comp, 'ntree'],
+                        mtry = parameters[parameters$compound == comp, 'mtry'], 
+                        nodesize = parameters[parameters$compound == comp, 'nodesize'], 
+                        importance = TRUE)
+    pred <- predict(fit, newdata=data[folds[[v]],], type="prob")[,2] #keep the probability of Y = 1
+    return(pred)
+  }
+  # create folds
+  folds <- .cvFolds(Y=data$final, V=10)
+  #CV train/predict
+  rf.predictions <- sapply(seq(10), .doFit, folds=folds, data=data) 
+  rf.labels <- sapply(folds, function(x){data$final[x]})
+  # apply prediction function from RORC package
+  pred.rf <- prediction(rf.predictions, rf.labels)
+  perf.rf <- performance(pred.rf, 'tpr', 'fpr')
+  # calculate the AUC for the 10 ROC curves
+  auc <- performance(pred.rf, "auc")
+  mean_auc <- auc@y.values %>% unlist() %>% mean()
+  se_auc <- auc@y.values %>% unlist() %>% sd() / sqrt(10)
+  # 95% CI
+  auc_lb <- mean_auc - 1.96 * se_auc
+  auc_ub <- mean_auc + 1.96 * se_auc
+  # #Forest 2: Regression; only with detects, log transform
+  # set.seed(123)
+  # reg <- compounds_data[[comp]][compounds_data[[comp]]$final == 1, ]%>%
+  #   mutate(reg_log = log(reg))%>%
+  #   dplyr::select(-c(StationID, reg, final))
+  # 
+  # ids <- sample(0.7*nrow(reg))
+  # reg_train <- reg[ids,]
+  # reg_test <- reg[-ids,]
+  # 
+  # reg_forest <- randomForest(reg_log~., data = reg_train,
+  #                            ntree = reg_parameters[reg_parameters$compound == comp, 'ntree'],
+  #                            mtry = reg_parameters[reg_parameters$compound == comp, 'mtry'],
+  #                            nodesize = reg_parameters[reg_parameters$compound == comp, 'nodesize'],
+  #                            importance = TRUE)
+  # 
+  # outbag_predictions <- reg_forest %>% predict(reg_test)
+  # test.err <- mean((reg_test$reg_log - outbag_predictions)^2)
+  # # test.err <- with(reg_test, mean((log(reg_test$reg) - outbag_predictions)^2))
+  # test.rsq <- 1-(test.err/var(reg_test$reg_log))
   
   compounds_forest[[comp]] <- 
-    list(forest = forest, 
-         reg_forest = reg_forest, 
-         train_data = clist[['train_data']], 
-         test_data = clist[['test_data']], 
-         predictions = predictions,
-         outbag_predictions = outbag_predictions,
-         test_err = test.err,
-         test.rsq = test.rsq)
+    list(#forest = forest, 
+         #reg_forest = reg_forest, 
+         #train_data = clist[['train_data']], 
+         #test_data = clist[['test_data']], 
+         perf.rf = perf.rf,
+         mean_auc = mean_auc,
+         auc_lb = auc_lb,
+         auc_ub = auc_ub)
+         # outbag_predictions = outbag_predictions,
+         # test_err = test.err,
+         # test.rsq = test.rsq)
 }
 
 
 
 # Save --------------------------------------------------------------------
 
-saveRDS(compounds_forest, '../../models/compounds_forest01192021.rds')
+saveRDS(compounds_forest, '../../models/compounds_forest02022021.rds')
 
 
 
