@@ -8,7 +8,7 @@ library(MASS)
 # Load --------------------------------------------------------------------
 
 compounds_data <- readRDS('../../modeling_data/compounds_data01232021.rds')
-compounds <- names(compounds_data)
+compounds <- c("PFPEA", "PFHXA", "PFHPA", "PFOA", "PFOS",  "PFAS") 
 level_key <- c("final" = "final",
               "ImpactPlastics" = "Industry: Plastics and rubber", 
                "recharge" = "Hydro: Groundwater recharge",
@@ -59,12 +59,17 @@ for(comp in compounds) {
   fit <- glm(final~., data = data, 
              family = binomial) %>% 
     stepAIC(trace = FALSE, direction = "both")
+  # standardized logistic regression
+  std_fit <- arm::standardize(fit)
+  # make sure the coefficients have the same name in both models
+  names(std_fit$coefficients) <- names(fit$coefficients)
   compounds_logreg[[comp]] <- 
-    list(model = fit)
+    list(model = fit,
+         model_std = std_fit)
 }
 
 saveRDS(compounds_logreg, '../../models/compounds_logreg_02052021.rds')
-
+ 
 # use 10-fold cross validation to evaluate model performance
 ## set up empty list
 compounds_glm <- list()

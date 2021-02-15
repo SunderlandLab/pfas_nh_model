@@ -331,7 +331,7 @@ p2<-final_industries%>%
                                               ImpactT ="Textile manufacturing"))) +
   scale_fill_brewer(palette = "Set1")+
   scale_x_continuous(trans = "log10",
-    name = "Industrial impact") +
+    name = bquote('Industrial impact'~(km^-1)),) +
   theme_classic() +
   labs(fill='Buffer distance', y = "Density")+
   theme(text = element_text(size = 16),

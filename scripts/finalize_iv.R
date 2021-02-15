@@ -141,7 +141,10 @@ unique_ivs<-unique_ivs %>%
   mutate(ImpactOI = ImpactOI + ImpactS + ImpactPr + ImpactM + ImpactT) %>%
   dplyr::select(-c(ImpactS, ImpactPr, ImpactM, ImpactT))
 
-
+# summarize the number of wells with non-zero impact from each industry type
+unique_ivs %>%
+  dplyr::select(contains("Impact")) %>%
+  map(., function(x){sum(x!=0)})
 M<-unique_ivs %>%
   dplyr::select_if(is.numeric) %>%
   cor()

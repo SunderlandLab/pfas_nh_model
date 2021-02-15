@@ -99,6 +99,26 @@ frs_businesses <- read_csv("../../raw_data/FRS/NH_NAICS_FILE.CSV") %>%
 #frs_businesses %>% 
 #  writeOGR("../../raw_data", layer = "frs", driver = "ESRI Shapefile")
 #combine point sources and write out
+# table s3
+a<-read_csv("../../raw_data/FRS/NH_NAICS_FILE.CSV") %>%
+  left_join(read_csv("../../raw_data/FRS/NH_FACILITY_FILE.CSV"), by = "REGISTRY_ID") %>%
+  mutate(NAICS = NAICS_CODE,
+         CREATE_DATE = lubridate::dmy(CREATE_DATE)) %>%
+  filter(CREATE_DATE <= as.Date('2017-10-31'),
+         grepl("^313|^322|^323|^324|^3255|^32591|^3328|^3344", NAICS)) %>%
+  distinct(LATITUDE83, LONGITUDE83, .keep_all = T) %>%
+  # create industry group label based on NAICS code
+  mutate(industry_group = case_when(grepl("^313", NAICS) ~ "T",
+                                    grepl("^322", NAICS) ~ "Paper",
+                                    grepl("^323", NAICS) ~ "Printing",
+                                    grepl("^324", NAICS) ~ "Petroleum",
+                                    grepl("^3255", NAICS) ~ "Chemical",
+                                    grepl("^32591", NAICS) ~ "Printing ink",
+                                    grepl("^3344", NAICS) ~ "S",
+                                    grepl("^3328", NAICS) ~ "M",
+                                    TRUE ~ "OI")) 
+table(a$industry_group)
+
 bind_rows(airport_nh, wwtp_nh, dod_nh, frs_businesses) %>%
   st_write("../../raw_data/nh_ucmr_01232021.shp", append = FALSE)
 
@@ -122,6 +142,8 @@ SG <- proj_businesses%>%
     filter(CONAME == "SAINT-GOBAIN PERFORMANCE PLSTC")
 SG_buffer10km <-  SG%>%
     st_buffer(dist = 10000)
+SG_buffer30km <-  SG%>%
+  st_buffer(dist = 30000)
 
 # Identify wells within the 10km radius buffer zone of SG
 SG_wells <- st_join(unique_wells, SG_buffer10km, join = st_intersects) %>%
@@ -132,11 +154,24 @@ SG_wells<- cbind(SG_wells,SG_distances) %>%
     mutate(ImpactPlastics = 1/exp(SG_distances/1000)) %>%
     dplyr::select(StationID, ImpactPlastics)
 
+# Identify wells within the 30km radius buffer zone of SG
+SG_wells_30k <- st_join(unique_wells, SG_buffer30km, join = st_intersects) %>%
+  filter(!is.na(NAICS))
+SG_distances <- st_distance(SG_wells_30k, SG)
+SG_wells_30k<- cbind(SG_wells_30k,SG_distances) %>%
+  mutate(SG_distances = as.numeric(SG_distances)) %>%
+  mutate(ImpactPlastics = 1/exp(SG_distances/1000)) %>%
+  dplyr::select(StationID, ImpactPlastics)
+
 # TCI
 TCI <- proj_businesses%>%
     filter(CONAME == "TEXTILES COATED INC")
 TCI_buffer10km <-  TCI%>%
     st_buffer(dist = 10000)
+TCI_buffer30km <-  TCI%>%
+  st_buffer(dist = 30000)
+
+# identify wells within 10km of TCI
 TCI_wells <- st_join(unique_wells, TCI_buffer10km, join = st_intersects) %>%
     filter(!is.na(NAICS))
 TCI_distances <- st_distance(TCI_wells, TCI)
@@ -144,6 +179,16 @@ TCI_wells<- cbind(TCI_wells,TCI_distances) %>%
     mutate(TCI_distances = as.numeric(TCI_distances)) %>%
     mutate(ImpactTextile = 1/exp(TCI_distances/1000)) %>%
     dplyr::select(StationID, ImpactTextile)
+
+# identify wells within 30km of TCI
+TCI_wells_30k <- st_join(unique_wells, TCI_buffer30km, join = st_intersects) %>%
+  filter(!is.na(NAICS))
+TCI_distances <- st_distance(TCI_wells_30k, TCI)
+TCI_wells_30k<- cbind(TCI_wells_30k,TCI_distances) %>%
+  mutate(TCI_distances = as.numeric(TCI_distances)) %>%
+  mutate(ImpactTextile = 1/exp(TCI_distances/1000)) %>%
+  dplyr::select(StationID, ImpactTextile)
+
 
 # Merge -------------------------------------------------------------------
 final_industries <- impact %>%
@@ -160,6 +205,67 @@ final_industries%>%
     
 # Save --------------------------------------------------------------------
 saveRDS(final_industries, '../../modeling_data/final_industries01232021.rds')
+
+# sensitivity analysis of buffer size
+df_a <- left_join(SG_wells %>% st_drop_geometry(), 
+                  TCI_wells %>% st_drop_geometry(), 
+                  by = "StationID")
+df_b <- left_join(SG_wells_30k %>% st_drop_geometry(), 
+                  TCI_wells_30k %>% st_drop_geometry(), 
+                  by = "StationID")
+options(scipen = 0)
+options(digits = 3)
+# compare two buffer sizes
+p1<-df_a%>%
+  left_join(df_b, by = "StationID", suffix = c(".10k", ".30k")) %>%
+  #filter(ImpactPl10k != ImpactPl30k | ImpactT10k != ImpactT30k) %>%
+  dplyr::select(contains("ImpactPlastics") | contains("ImpactTextile")) %>%
+  pivot_longer(everything(), names_to = "variable", values_to = "value") %>%
+  separate(variable, into = c("industry", "distance")) %>%
+  ggplot(aes(x = value)) +
+  geom_density(aes(fill = distance), alpha = 0.4) +
+  facet_wrap(~ industry, scales = "free",  
+             labeller = labeller(industry = c(ImpactPlastics = "Plastics and rubber",
+                                              ImpactTextile ="Textile manufacturing"))) +
+  scale_fill_brewer(palette = "Set1")+
+  scale_x_continuous(name = bquote('Industrial impact'~(km^-1))) +
+  theme_classic() +
+  labs(fill=NULL, y = "Density")+
+  theme(text = element_text(size = 16),
+        strip.text = element_text(size = 16),
+        axis.text.x = element_text(size = 16),
+        axis.text.y = element_text(size = 16),
+        legend.position = "bottom")
+# p2<-df_a%>%
+#   left_join(df_b, by = "StationID", suffix = c(".10k", ".30k")) %>%
+#   #filter(ImpactPl10k != ImpactPl30k | ImpactT10k != ImpactT30k) %>%
+#   dplyr::select(contains("ImpactPlastics") | contains("ImpactTextile")) %>%
+#   pivot_longer(everything(), names_to = "variable", values_to = "value") %>%
+#   separate(variable, into = c("industry", "distance")) %>%
+#   ggplot(aes(x = value)) +
+#   geom_density(aes(fill = distance), alpha = 0.4) +
+#   facet_wrap(~ industry, scales = "free",  
+#              labeller = labeller(industry = c(ImpactPlastics = "Plastics and rubber",
+#                                               ImpactTextile ="Textile manufacturing"))) +
+#   scale_fill_brewer(palette = "Set1")+
+#   scale_x_continuous(trans = "log10",
+#                      name = bquote('Industrial impact'~(km^-1))) +
+#   theme_classic() +
+#   labs(fill='Buffer distance', y = "Density")+
+#   theme(text = element_text(size = 16),
+#         strip.text = element_text(size = 16),
+#         axis.text.x = element_text(size = 16),
+#         axis.text.y = element_text(size = 16),
+#         legend.title = element_text(size = 16),
+#         legend.key.size = unit(1, "cm"),
+#         legend.text = element_text(size = 16),
+#         legend.position="bottom")
+# ggpubr::ggarrange(p1, p2, 
+#                   labels = c("A", "B"),
+#                   ncol = 1, nrow = 2)
+ggsave(plot = p1, "../../output/Figure_sens_buffer_size.png",width = 9,
+       height = 5,
+       units = "in")
 
 # visualize point sources
 industries_nh<-bind_rows(airport_nh, wwtp_nh, dod_nh, frs_businesses,
