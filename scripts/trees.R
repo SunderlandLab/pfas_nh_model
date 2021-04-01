@@ -10,7 +10,7 @@ library(pROC)
 
 # Load --------------------------------------------------------------------
 
-compounds_data <- readRDS('../../modeling_data/compounds_data01232021.rds')
+compounds_data <- readRDS('../../modeling_data/compounds_data.rds')
 #compounds_logreg_alt <- readRDS('../../models/compounds_logreg_01232021.rds')
 
 compounds <- names(compounds_data)
@@ -96,7 +96,7 @@ for (comp in compounds) {
 
 # Save --------------------------------------------------------------------
 
-saveRDS(compounds_forest, '../../models/compounds_forest02022021.rds')
+saveRDS(compounds_forest, '../../models/compounds_forest.rds')
 
 
 

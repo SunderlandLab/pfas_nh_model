@@ -4,37 +4,64 @@
 library(tidyverse)
 library(caret)
 library(MASS)
+library(rlang)
 
 # Load --------------------------------------------------------------------
 
-compounds_data <- readRDS('../../modeling_data/compounds_data01232021.rds')
+compounds_data <- readRDS('../../modeling_data/compounds_data.rds')
 compounds <- c("PFPEA", "PFHXA", "PFHPA", "PFOA", "PFOS",  "PFAS") 
 level_key <- c("final" = "final",
-              "ImpactPlastics" = "Industry: Plastics and rubber", 
-               "recharge" = "Hydro: Groundwater recharge",
-               "precip" = "Hydro: Monthly precipitation",
-               "ImpactTextile" = "Industry: Textiles manufacturing",
-               "silttotal_r" = "Soil: Percent total silt",
-               "cec7_r" = "Soil: Cation exchange capacity",
-               "claytotal_r" = "Soil: Percent total clay",
-               "slopegradwta" = "Hydro: Slope gradient",
+               "Industry: Plastics and rubber" = "ImpactPlastics",
+               "Hydro: Groundwater recharge" = "recharge",
+               "Hydro: Monthly precipitation" = "precip",
+               "Industry: Textiles manufacturing" = "ImpactTextile",
+               "Soil: Percent total silt" = "silttotal_r",
+               "Soil: Cation exchange capacity" = "cec7_r",
+               "Soil: Percent total clay" = "claytotal_r",
+               "Hydro: Slope gradient" = "slopegradwta",
                #"ImpactPr" = "Industry: Printing industry",
-               "soc0_999" = "Soil: Organic carbon",
-               "dbthirdbar_r" = "Soil: Bulk density",
-               "awc_r" = "Soil: Available water capacity",
-               "ImpactOI" = "Industry: Other",
-               "ImpactAirports" = "Industry: Airports",
-               "ImpactWWTP" = "Industry: Wastewater treatment plant",
-               "ImpactMilitary" = "Industry: Military AFFF",
+               "Soil: Organic carbon" ='soc0_999',
+               "Soil: Bulk density" = "dbthirdbar_r",
+               "Soil: Available water capacity" = "awc_r",
+               "Industry: Other" = "ImpactOI",
+               "Industry: Airports" = "ImpactAirports",
+               "Industry: Wastewater treatment plant" = "ImpactWWTP",
+               "Industry: Military AFFF" = "ImpactMilitary",
                #"ImpactM" = "Industry: Metal plating",
-               "hzdep" = "Soil: Thickness of soil horizon",
-               "bedrock_M" = "Geo: Bedrock type",
-               "hydgrpdcdA" = "Hydro: Low runoff potential",
+               "Soil: Thickness of soil horizon" = "hzdep",
+               "Geo: Bedrock type" = "bedrock_M",
+               "Hydro: Low runoff potential" = "hydgrpdcdA",
                #"ImpactS" = "Industry: Semiconductor manufacturing",
-               "wtdepannmin" = "Hydro: Depth to water table",
-               "brockdepmin" = "Geo: Depth to bedrock",
-               "sandtotal_r" = "Soil: Percent total sand",
-               "ksat_r" = "Soil: Saturated hydraulic conductivity")
+               "Hydro: Depth to water table" = "wtdepannmin",
+               "Geo: Depth to bedrock" = "brockdepmin",
+               "Soil: Percent total sand" = "sandtotal_r",
+               "Soil: Saturated hydraulic conductivity" = "ksat_r")
+# level_key <- c("final" = "final",
+#               "ImpactPlastics" = "Industry: Plastics and rubber", 
+#                "recharge" = "Hydro: Groundwater recharge",
+#                "precip" = "Hydro: Monthly precipitation",
+#                "ImpactTextile" = "Industry: Textiles manufacturing",
+#                "silttotal_r" = "Soil: Percent total silt",
+#                "cec7_r" = "Soil: Cation exchange capacity",
+#                "claytotal_r" = "Soil: Percent total clay",
+#                "slopegradwta" = "Hydro: Slope gradient",
+#                #"ImpactPr" = "Industry: Printing industry",
+#                "soc0_999" = "Soil: Organic carbon",
+#                "dbthirdbar_r" = "Soil: Bulk density",
+#                "awc_r" = "Soil: Available water capacity",
+#                "ImpactOI" = "Industry: Other",
+#                "ImpactAirports" = "Industry: Airports",
+#                "ImpactWWTP" = "Industry: Wastewater treatment plant",
+#                "ImpactMilitary" = "Industry: Military AFFF",
+#                #"ImpactM" = "Industry: Metal plating",
+#                "hzdep" = "Soil: Thickness of soil horizon",
+#                "bedrock_M" = "Geo: Bedrock type",
+#                "hydgrpdcdA" = "Hydro: Low runoff potential",
+#                #"ImpactS" = "Industry: Semiconductor manufacturing",
+#                "wtdepannmin" = "Hydro: Depth to water table",
+#                "brockdepmin" = "Geo: Depth to bedrock",
+#                "sandtotal_r" = "Soil: Percent total sand",
+#                "ksat_r" = "Soil: Saturated hydraulic conductivity")
 # use full dataset to fit model
 ## set up empty list
 compounds_logreg <- list()
@@ -46,10 +73,7 @@ for(comp in compounds) {
   # rename variables for better output
   
   data <- data %>% 
-    mutate_if(is.factor, as.numeric) %>%
-    pivot_longer(-StationID, names_to = "variable", values_to = "value") %>%
-    mutate(variable = recode(variable, !!!level_key)) %>%
-    pivot_wider(names_from = "variable", values_from = "value") %>%
+    rename(!!level_key) %>%
     mutate(final = as.factor(final),
            `Geo: Bedrock type` = as.factor(`Geo: Bedrock type`),
            `Hydro: Low runoff potential` = as.factor(`Hydro: Low runoff potential`)) %>%
@@ -68,7 +92,7 @@ for(comp in compounds) {
          model_std = std_fit)
 }
 
-saveRDS(compounds_logreg, '../../models/compounds_logreg_02052021.rds')
+saveRDS(compounds_logreg, '../../models/compounds_logreg.rds')
  
 # use 10-fold cross validation to evaluate model performance
 ## set up empty list
@@ -146,7 +170,7 @@ for (comp in compounds) {
 # })
 
 # Save --------------------------------------------------------------------
-saveRDS(compounds_glm, '../../models/compounds_glm_02022021.rds')
+saveRDS(compounds_glm, '../../models/compounds_glm.rds')
 
 # colocation of industries
 

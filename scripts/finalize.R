@@ -9,8 +9,8 @@ p_load("docxtools")
 
 # Load --------------------------------------------------------------------
 
-merged_variables <- readRDS('../../modeling_data/merged_variables01232021.rds')
-unique_ivs <- readRDS('../../modeling_data/unique_ivs01232021.rds')
+merged_variables <- readRDS('../../modeling_data/merged_variables.rds')
+unique_ivs <- readRDS('../../modeling_data/unique_ivs.rds')
 
 
 # Generate separate dataframe for each compound ---------------------------
@@ -26,7 +26,8 @@ for (i in 1:length(compounds_data)) {
   # Rename columns
   colnames(df_final)[2] <- "reg"
   colnames(df_final)[3] <- "final"
-  df_final$final <- as.factor(df_final$final)
+  df_final$final <- if_else(df_final$final>0, 1, 0) %>%
+    factor(levels = c(0, 1))
   compounds_data[[i]] <- df_final
 }
 
@@ -41,23 +42,24 @@ lapply(compounds_data, function(x){
 
 # Save --------------------------------------------------------------------
 
-saveRDS(compounds_data, '../../modeling_data/compounds_data01232021.rds')
+saveRDS(compounds_data, '../../modeling_data/compounds_data.rds')
 
 
 # Table 1
-compounds_data <- readRDS('../../modeling_data/compounds_data01232021.rds')
+compounds_data <- readRDS('../../modeling_data/compounds_data.rds')
 
 table1_df<-bind_rows(!!!compounds_data, .id = "compound") %>%
-  mutate(DL = case_when(compound == "PFOA" ~ 2, # uniform detection limit (ng/L)
-                        compound == "PFHXA" ~ 4.5,
-                        compound == "PFHPA" ~ 2,
-                        compound == "PFPEA" ~ 4.5,
-                        compound == "PFOS" ~ 4,
-                        compound == "PFAS" ~ 17,
+  mutate(DL = case_when(compound == "PFOA" ~ 8, # uniform detection limit (ng/L)
+                        compound == "PFHXA" ~ 8,
+                        compound == "PFHPA" ~ 5,
+                        compound == "PFPEA" ~ 5,
+                        compound == "PFOS" ~ 5,
+                        compound == "PFAS" ~ 31,
                         TRUE ~ NA_real_),
          compound = case_when(compound == "PFHXA" ~ "PFHxA",
                               compound == "PFHPA" ~ "PFHpA",
                               compound == "PFPEA" ~ "PFPeA",
+                              compound == "PFAS" ~ "sumPFAS",
                               TRUE ~ compound)) 
 
 table1_master<-table1_df %>%
@@ -73,7 +75,7 @@ table1_master<-table1_df %>%
             p98 = quantile(value, 0.98),
             max = max(value)) %>%
   ungroup() %>%
-  mutate(compound = factor(compound, levels = c("PFPeA", "PFHxA", "PFHpA", "PFOA", "PFOS", "PFAS"))) %>%
+  mutate(compound = factor(compound, levels = c("PFPeA", "PFHxA", "PFHpA", "PFOA", "PFOS", "sumPFAS"))) %>%
   arrange(compound, name)
 
 
@@ -99,7 +101,7 @@ level_key <- c("ImpactPlastics" = "Industry: Plastics and rubber",
                "soc0_999" = "Soil: Organic carbon",
                "dbthirdbar_r" = "Soil: Bulk density",
                "awc_r" = "Soil: Available water capacity",
-               "ImpactOI" = "Industry: Other",
+               "ImpactOI" = "Industry: Suspected sources",
                "ImpactWWTP" = "Industry: Wastewater treatment plant",
                "ImpactAirports" = "Industry: Airport",
                #"ImpactMilitary" = "Industry: Military AFFF",
@@ -125,7 +127,7 @@ table1_df %>%
   ungroup() %>%
   mutate(compound = factor(compound, levels = c("PFPeA", "PFHxA", "PFHpA", "PFOA", "PFOS", "PFAS"))) %>%
   arrange(compound, name) %>%
-  mutate(name = recode(name, !!!level_key)) %>%
+  mutate(name = dplyr::recode(name, !!!level_key)) %>%
   format_engr(., sigdig = 3) %>%
   filter(compound == "PFOA" & name != "reg") %>%
   dplyr::select(name, everything(.)) %>%
@@ -153,7 +155,7 @@ table1_cat<-table1_df %>%
   arrange(compound, name)
 
 table1_cat %>%
-  mutate(name = recode(name, !!!level_key)) %>%
+  mutate(name = dplyr::recode(name, !!!level_key)) %>%
   #format_engr(., sigdig = 3) %>%
   dplyr::select(name, everything(.)) %>%
   separate(name, c("group", "variable"), sep = ":")%>%

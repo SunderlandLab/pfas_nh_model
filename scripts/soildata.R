@@ -57,7 +57,7 @@ y <- component_categorical[!x,]
 component_numeric <- component1[, c(2,4:6,12,15:27)]
 
 # Revisit: perhaps there's a better way in which for a given mukey, if all the values are 
-# NA, the final value should be NA...ask Cindy - replace NAs with means?
+# NA, the final value should be NA.
 
 #adding 0.001 to distinguish true zeroes - after aggregation, true zeroes are nonzero and false zeroes are zero
 component_numeric[,-1] <- component_numeric[,-1] + 0.00001
@@ -82,5 +82,5 @@ final_soildata <- final_soildata[-c(2365:2369),]
 sapply(final_soildata, function(x){sum(is.na(x))})
 # Save --------------------------------------------------------------------
 
-saveRDS(final_soildata, '../../modeling_data/final_soildata1227.rds')
+saveRDS(final_soildata, '../../modeling_data/final_soildata.rds')
 

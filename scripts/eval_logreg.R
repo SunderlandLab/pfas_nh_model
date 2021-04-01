@@ -6,9 +6,9 @@ library(broom)
 library(stargazer)
 # Load --------------------------------------------------------------------
 
-compounds_data <- readRDS('../../modeling_data/compounds_data01232021.rds')
-compounds_logreg <- readRDS('../../models/compounds_logreg_02052021.rds')
-compounds_glm <- readRDS("../../models/compounds_glm_02022021.rds")
+compounds_data <- readRDS('../../modeling_data/compounds_data.rds')
+compounds_logreg <- readRDS('../../models/compounds_logreg.rds')
+compounds_glm <- readRDS("../../models/compounds_glm.rds")
 
 # Evaluate models ---------------------------------------------------------
 
@@ -69,22 +69,8 @@ c_stat_ls<-sapply(compounds_logreg,
                   function(x){DescTools::Cstat(x[["model_std"]])%>%
                       round(2)})
 
-stargazer_custom <- function(model, ...) {
-  if(!("list" %in% class(model))) model <- list(model)
-  coef_formatted <- lapply(model, function(x) signif(coef(x), 3)) #format coefficient
-  se_formatted <- lapply(model, function(x) round(summary(x)$coef[, 2], 3))
-  p2 <- lapply(model, function(x) signif(summary(x)$coefficients[, 4], 3))
-  a<-coef_formatted %>% sapply(unname)
-  b<-se_formatted %>% sapply(unname)
-  ci_list <- map2(a, b, paste, "+/-")
-  stargazer(model, coef = coef_formatted, se = se_formatted, p = p2, 
-            ci= T,
-            ci.custom = ci_list,
-            ...)
-}
-
-stargazer_custom(lapply(compounds_logreg, function(x){x[["model_std"]]}), 
-           odd.ratio = F, title="",
+stargazer(lapply(compounds_logreg, function(x){x[["model_std"]]}), 
+           title="",
            align=TRUE, type="text",
            column.labels=c("PFPeA","PFHxA","PFHpA","PFOA","PFOS", "PFAS5"),
            model.numbers=FALSE, keep.stat=c("n","aic"),
@@ -96,8 +82,8 @@ stargazer_custom(lapply(compounds_logreg, function(x){x[["model_std"]]}),
            # change the order of the variables
            order = c("Industry: P", "Industry: T", "Industry: A", 
                      "Industry: M", "Industry: W", "Industry: O",
-                     "Geo", "Hydro", "Soil"))#,
-           #out="../../output/logmodel_std_02052021.txt")
+                     "Geo", "Hydro", "Soil"),
+           out="../../output/logmodel_std_03312021.txt")
 
 
 

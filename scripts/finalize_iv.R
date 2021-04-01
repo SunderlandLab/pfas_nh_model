@@ -9,8 +9,8 @@ bedrock <- read.csv("../../raw_data/bedrock_extraction.csv", header = TRUE, sep 
 precip <- read.csv("../../raw_data/precip_PFAS.csv", header = TRUE, sep = ",", na.strings = c("", " ", "NA"))
 recharge <- read.csv("../../raw_data/recharge1122.csv", header = TRUE, sep = ",", na.strings = c("", " ", "NA"))
 # Processed RDS's
-final_industries <- readRDS('../../modeling_data/final_industries01232021.rds')
-final_soildata <- readRDS('../../modeling_data/final_soildata1227.rds')
+final_industries <- readRDS('../../modeling_data/final_industries.rds')
+final_soildata <- readRDS('../../modeling_data/final_soildata.rds')
 PFASwells <- readRDS('../../modeling_data/PFASwells.rds')
 PFASwells$PFASreg <- PFASwells %>%
   dplyr::select(ends_with("reg")) %>%
@@ -57,7 +57,7 @@ sapply(unique_ivs, function(x){sum(is.na(x))})
 #replacing with column mean
 #where var is iterating through the precip, recharge, and soil columns
 #soil properties, impute missing as column average
-for (var in c(2:3,14:30)) {
+for (var in c(2:3,12:ncol(unique_ivs))) {
   if (var <= 3)
   {
     avg <- mean(unique_ivs[,var], na.rm = TRUE)
@@ -71,7 +71,7 @@ for (var in c(2:3,14:30)) {
 }
 
 #impact from industry, impute missing as zero
-for(var in c(4:13)) {
+for(var in c(4:11)) {
   unique_ivs[is.na(unique_ivs[,var]), var] <- 0
 }
 # Condense number of categories for categorical variables -----------------
@@ -157,5 +157,5 @@ unique_ivs <- unique_ivs[, -which(names(unique_ivs) %in% rm)]
 
 # Save --------------------------------------------------------------------
 
-saveRDS(merged_variables, '../../modeling_data/merged_variables01232021.rds')
-saveRDS(unique_ivs, '../../modeling_data/unique_ivs01232021.rds')
+saveRDS(merged_variables, '../../modeling_data/merged_variables.rds')
+saveRDS(unique_ivs, '../../modeling_data/unique_ivs.rds')

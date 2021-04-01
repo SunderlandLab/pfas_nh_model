@@ -13,9 +13,9 @@ library(ggthemes)
 options(scipen=999)
 # Load --------------------------------------------------------------------
 
-compounds_forest <- readRDS('../../models/compounds_forest02022021.rds')
-compounds_data <- readRDS('../../modeling_data/compounds_data01232021.rds')
-compounds_glm <- readRDS("../../modeling_data/compounds_glm_02022021.rds")
+compounds_forest <- readRDS('../../models/compounds_forest.rds')
+compounds_data <- readRDS('../../modeling_data/compounds_data.rds')
+compounds_glm <- readRDS("../../modeling_data/compounds_glm.rds")
 # compounds_data %>%
 #   map(function(x){
 #     x %>% 
@@ -144,6 +144,12 @@ compounds <- names(compounds_data)
 cols <- RColorBrewer::brewer.pal(12,'Paired')
 # no.11 is light yellow
 cols[11] <- "#E6AB02"
+
+png("../../output/Figure1_model_performance.png",
+    width = 7,
+    height = 5,
+    res = 300,
+    units = "in")
 par(mfrow = c(2,3))
 for(i in 1:6){
   comp <- compounds[i]
@@ -156,26 +162,19 @@ for(i in 1:6){
   comp <- case_when(comp == "PFPEA" ~ "PFPeA",
                     comp == "PFHPA" ~ "PFHpA",
                     comp == "PFHXA" ~ "PFHxA",
+                    comp == "PFAS" ~ "sumPFAS",
                     TRUE ~ comp)
-  plot(perf.rf, lty=3, col=cols[2*i-1], main=paste("RF and LR for prediction of\n", comp, "detection"))
+  plot(perf.rf, lty=3, col=cols[2*i-1], main = comp)
   plot(perf.glm, lty=3, col=cols[2*i], add = TRUE)
   plot(perf.rf, avg="vertical", lwd=3, col = cols[2*i-1],
        spread.estimate="stderror", plotCI.lwd=2, add=TRUE)
   plot(perf.glm, avg="vertical", lwd=3, col = cols[2*i],
        spread.estimate="stderror", plotCI.lwd=2, add=TRUE)
-  legend(0.7, 0.3 ,c('RF','LR'),col=c(cols[2*i-1], cols[2*i]), lwd=3)
-  
-  #abline(h = 0.8, color = "black", add = TRUE, lty =3)
-  # legend(0.5, 0.2, 
-  #        paste0("AUC: ", mean_auc %>% round(2),
-  #               '\n',
-  #               "95% CI: (", auc_lb %>% round(2),
-  #               ", ",  auc_ub %>% round(2), ")"),
-  #        x.intersp = -0.2,
-  #        adj = c(0, 0.2))
-  
+  legend(0.1, 0.3 ,c('Random forest','Logistic regression'),col=c(cols[2*i-1], cols[2*i]), lwd=3,
+         bty = "n")
 }
 
+dev.off()
 
 # Variable Importance Plots
 variable_names<- compounds_data$PFOA%>%
@@ -189,7 +188,15 @@ var_imp_df <- var_imp_df%>%
          PFPeA = PFPEA,
          PFHpA = PFHPA) %>%
   dplyr::select(-c(PFHXA, PFPEA, PFHPA))
-level_key <- c("ImpactPlastics" = "Industry: Plastics and rubber", 
+
+map(compounds_forest, function(x){
+  print(paste("AUC", x$mean_auc %>% round(2), 
+              "LB", x$auc_lb %>% round(2),
+              "UB", x$auc_ub %>% round(2)))
+})
+
+level_key <- c("final" = "final",
+              "ImpactPlastics" = "Industry: Plastics and rubber",
                "recharge" = "Hydro: Groundwater recharge",
                "precip" = "Hydro: Monthly precipitation",
                "ImpactTextile" = "Industry: Textiles manufacturing",
@@ -201,7 +208,7 @@ level_key <- c("ImpactPlastics" = "Industry: Plastics and rubber",
                "soc0_999" = "Soil: Organic carbon",
                "dbthirdbar_r" = "Soil: Bulk density",
                "awc_r" = "Soil: Available water capacity",
-               "ImpactOI" = "Industry: Other",
+               "ImpactOI" = "Industry: Suspected sources",
                "ImpactAirports" = "Industry: Airports",
                "ImpactWWTP" = "Industry: Wastewater treatment plant",
                "ImpactMilitary" = "Industry: Military AFFF",
@@ -214,31 +221,24 @@ level_key <- c("ImpactPlastics" = "Industry: Plastics and rubber",
                "brockdepmin" = "Geo: Depth to bedrock",
                "sandtotal_r" = "Soil: Percent total sand",
                "ksat_r" = "Soil: Saturated hydraulic conductivity")
-
-map(compounds_forest, function(x){
-  print(paste("AUC", x$mean_auc %>% round(2), 
-              "LB", x$auc_lb %>% round(2),
-              "UB", x$auc_ub %>% round(2)))
-})
-
-name_key <- c("PFPeA" = "PFPeA\n\nn:1618\nAUROC:0.80\n(0.78, 0.83)", 
-              "PFHxA" = "PFHxA\n\nn:1726\nAUROC:0.80\n(0.77, 0.82)", 
-              "PFHpA" = "PFHpA\n\nn:2221\nAUROC:0.83\n(0.82, 0.84)", 
-              "PFOA" = "PFOA\n\nn:2377\nAUROC:0.82\n(0.80, 0.84)", 
-              "PFOS" = "PFOS\n\nn:2376\nAUROC:0.75\n(0.71, 0.78)",
-              "PFAS" = "PFAS\n\nn:2383\nAUROC:0.82\n(0.81, 0.83)")
-
 ##########################
 #Option 1 facet_grid 2D  #
 ##########################
 var_imp_df%>%
-  mutate(variable = recode(variable, !!!level_key)) %>%
+  mutate(variable = dplyr::recode(variable, !!!level_key)) %>%
   separate(variable, into = c("group", "varname"), sep = ":") %>%
   mutate(varname = trimws(varname),
          group = factor(group, levels = c("Industry", "Geo", "Hydro", "Soil")))%>%
   pivot_longer(-c(varname, group)) %>%
-  mutate(name = factor(name, levels = c("PFPeA", "PFHxA", "PFHpA", "PFOA", "PFOS", "PFAS")))%>%
-  mutate(name = recode(name, !!!name_key)) %>%
+  mutate(name = factor(name, levels = c("PFPeA", "PFHxA", "PFHpA", "PFOA", "PFOS", "PFAS"),
+                       ordered = T,
+                       labels = c("PFPeA\n\nn:1618\nAUROC:0.79\n(0.76,0.82)", 
+                                  "PFHxA\n\nn:1726\nAUROC:0.78\n(0.76,0.80)", 
+                                  "PFHpA\n\nn:2221\nAUROC:0.85\n(0.84,0.87)", 
+                                  "PFOA\n\nn:2377\nAUROC:0.84\n(0.83,0.85)", 
+                                  "PFOS\n\nn:2376\nAUROC:0.74\n(0.71,0.78)",
+                                  "sumPFAS\n\nn:2383\nAUROC:0.81\n(0.79, 0.83)")))%>%
+  #mutate(name = dplyr::recode(name, !!!name_key)) %>%
   ggplot(aes(x= reorder(varname, value), 
              y=value, fill = value)) +
   geom_bar(stat = "identity", color = "grey50") +
@@ -256,7 +256,7 @@ var_imp_df%>%
         legend.key.size = unit(1.2, "cm"),
         legend.text = element_text(size = 16),
         legend.position="bottom")
-ggsave("../../output/Figure1_rf_class_var_imp.png",width = 13,
+ggsave("../../output/Figure2_rf_class_var_imp.png",width = 13,
   height = 10,
   units = "in")
 

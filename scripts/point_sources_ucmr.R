@@ -54,20 +54,6 @@ wwtp_nh <- readxl::read_excel("../../raw_data/PFOSEmissionEstimation_WWTP_USA.xl
   dplyr::select(ID, geometry, industry_group)
 
 
-# wwtp_url <- "https://opendata.arcgis.com/datasets/4b9bac25263047c19e617d7bd7b30701_0.geojson"
-# wwtp_sf <- rgdal::readOGR(wwtp_url) %>%
-#   st_as_sf()
-# wwtp_nh <- wwtp_sf %>%
-#   filter(CWP_STATE == "NH") %>%
-#   distinct(geometry, .keep_all = T)
-# 14 WWTP from this list
-
-# cwns_nh <- read_csv("../../raw_data/cwns_nh_facility_details.csv") %>%
-#   mutate(flag = if_else(`Permit Number` %in% wwtp_nh$NPDES_ID, 1, 0) %>% factor(),
-#          pop = as.numeric(gsub(",", "", `Projected Residential Total Receiving Treatment Population`))) 
-# 88 WWTP from CWNS
-
-
 dod_nh <- find_within_nh("DoD268")
 # check with EWG list, this is not as complete, use EWG instead
 # ewg sites
@@ -150,8 +136,8 @@ SG_wells <- st_join(unique_wells, SG_buffer10km, join = st_intersects) %>%
     filter(!is.na(NAICS))
 SG_distances <- st_distance(SG_wells, SG)
 SG_wells<- cbind(SG_wells,SG_distances) %>%
-    mutate(SG_distances = as.numeric(SG_distances)) %>%
-    mutate(ImpactPlastics = 1/exp(SG_distances/1000)) %>%
+    mutate(d = as.numeric(SG_distances)) %>%
+    mutate(ImpactPlastics = 1/exp(d/1000)) %>%
     dplyr::select(StationID, ImpactPlastics)
 
 # Identify wells within the 30km radius buffer zone of SG
@@ -159,8 +145,8 @@ SG_wells_30k <- st_join(unique_wells, SG_buffer30km, join = st_intersects) %>%
   filter(!is.na(NAICS))
 SG_distances <- st_distance(SG_wells_30k, SG)
 SG_wells_30k<- cbind(SG_wells_30k,SG_distances) %>%
-  mutate(SG_distances = as.numeric(SG_distances)) %>%
-  mutate(ImpactPlastics = 1/exp(SG_distances/1000)) %>%
+  mutate(d = as.numeric(SG_distances)) %>%
+  mutate(ImpactPlastics = 1/exp(d/1000)) %>%
   dplyr::select(StationID, ImpactPlastics)
 
 # TCI
@@ -176,8 +162,8 @@ TCI_wells <- st_join(unique_wells, TCI_buffer10km, join = st_intersects) %>%
     filter(!is.na(NAICS))
 TCI_distances <- st_distance(TCI_wells, TCI)
 TCI_wells<- cbind(TCI_wells,TCI_distances) %>%
-    mutate(TCI_distances = as.numeric(TCI_distances)) %>%
-    mutate(ImpactTextile = 1/exp(TCI_distances/1000)) %>%
+    mutate(d = as.numeric(TCI_distances)) %>%
+    mutate(ImpactTextile = 1/exp(d/1000)) %>%
     dplyr::select(StationID, ImpactTextile)
 
 # identify wells within 30km of TCI
@@ -185,8 +171,8 @@ TCI_wells_30k <- st_join(unique_wells, TCI_buffer30km, join = st_intersects) %>%
   filter(!is.na(NAICS))
 TCI_distances <- st_distance(TCI_wells_30k, TCI)
 TCI_wells_30k<- cbind(TCI_wells_30k,TCI_distances) %>%
-  mutate(TCI_distances = as.numeric(TCI_distances)) %>%
-  mutate(ImpactTextile = 1/exp(TCI_distances/1000)) %>%
+  mutate(d = as.numeric(TCI_distances)) %>%
+  mutate(ImpactTextile = 1/exp(d/1000)) %>%
   dplyr::select(StationID, ImpactTextile)
 
 
@@ -194,7 +180,8 @@ TCI_wells_30k<- cbind(TCI_wells_30k,TCI_distances) %>%
 final_industries <- impact %>%
   left_join(TCI_wells %>% st_drop_geometry(), by = "StationID") %>%
   left_join(SG_wells %>% st_drop_geometry(), by = "StationID") %>%
-  mutate_all(funs(replace_na(.,0)))
+  mutate_all(funs(replace_na(.,0))) %>%
+  dplyr::select(c("StationID", contains("Impact")))
 
 final_industries%>%
       pivot_longer(-StationID) %>%
@@ -204,7 +191,7 @@ final_industries%>%
                 prop = n/n())
     
 # Save --------------------------------------------------------------------
-saveRDS(final_industries, '../../modeling_data/final_industries01232021.rds')
+saveRDS(final_industries, '../../modeling_data/final_industries.rds')
 
 # sensitivity analysis of buffer size
 df_a <- left_join(SG_wells %>% st_drop_geometry(), 
