@@ -83,7 +83,7 @@ stargazer(lapply(compounds_logreg, function(x){x[["model_std"]]}),
            order = c("Industry: P", "Industry: T", "Industry: A", 
                      "Industry: M", "Industry: W", "Industry: O",
                      "Geo", "Hydro", "Soil"),
-           out="../../output/logmodel_std_03312021.txt")
+           out="../../output/logmodel_std_04012021.txt")
 
 
 

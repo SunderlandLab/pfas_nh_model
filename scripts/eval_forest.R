@@ -232,11 +232,11 @@ var_imp_df%>%
   pivot_longer(-c(varname, group)) %>%
   mutate(name = factor(name, levels = c("PFPeA", "PFHxA", "PFHpA", "PFOA", "PFOS", "PFAS"),
                        ordered = T,
-                       labels = c("PFPeA\n\nn:1618\nAUROC:0.79\n(0.76,0.82)", 
-                                  "PFHxA\n\nn:1726\nAUROC:0.78\n(0.76,0.80)", 
-                                  "PFHpA\n\nn:2221\nAUROC:0.85\n(0.84,0.87)", 
-                                  "PFOA\n\nn:2377\nAUROC:0.84\n(0.83,0.85)", 
-                                  "PFOS\n\nn:2376\nAUROC:0.74\n(0.71,0.78)",
+                       labels = c("PFPeA\n\nn:1618\nAUROC:0.79\n(0.77,0.81)", 
+                                  "PFHxA\n\nn:1726\nAUROC:0.79\n(0.78,0.80)", 
+                                  "PFHpA\n\nn:2221\nAUROC:0.86\n(0.84,0.87)", 
+                                  "PFOA\n\nn:2377\nAUROC:0.84\n(0.82,0.85)", 
+                                  "PFOS\n\nn:2376\nAUROC:0.76\n(0.74,0.78)",
                                   "sumPFAS\n\nn:2383\nAUROC:0.81\n(0.79, 0.83)")))%>%
   #mutate(name = dplyr::recode(name, !!!name_key)) %>%
   ggplot(aes(x= reorder(varname, value), 

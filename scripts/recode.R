@@ -35,6 +35,23 @@ PFASwells1 <- PFASwells1 %>%
   recode('PFOA') %>%
   recode('PFOS')
 
+# drop the data that have LODs exceeding the 98th percentile
+drop_lod_g98 <- function(data, PFAS){
+  numeric_name <- paste0(PFAS, 'numeric') 
+  qualifier_name <- paste0(PFAS, 'qualifier')
+  results_name <- paste0(PFAS, 'results')
+  p98 <- quantile(data[[numeric_name]][data[[qualifier_name]] == '<'], prob = 0.98, na.rm = T)
+  data <- data %>%
+    filter(!(!!sym(qualifier_name) == "<" & !!sym(numeric_name) > p98))
+  return(data)
+}
+
+PFASwells1 <- PFASwells1 %>%
+  drop_lod_g98('PFPEA') %>%
+  drop_lod_g98('PFHXA') %>%
+  drop_lod_g98('PFHPA') %>%
+  drop_lod_g98('PFOA') %>%
+  drop_lod_g98('PFOS')
 
 # Create binary classifier for detect/non-detect --------------------------
 # Initialize columns
