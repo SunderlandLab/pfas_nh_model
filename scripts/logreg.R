@@ -69,15 +69,14 @@ compounds_logreg <- list()
 for(comp in compounds) {
   # remove stationID and continuous outcome
   data <- compounds_data[[comp]] %>%
-    dplyr::select(-c(reg))
+    dplyr::select(-c(reg, StationID))
   # rename variables for better output
   
   data <- data %>% 
     rename(!!level_key) %>%
     mutate(final = as.factor(final),
            `Geo: Bedrock type` = as.factor(`Geo: Bedrock type`),
-           `Hydro: Low runoff potential` = as.factor(`Hydro: Low runoff potential`)) %>%
-    dplyr::select(-StationID)
+           `Hydro: Low runoff potential` = as.factor(`Hydro: Low runoff potential`)) 
   # Logistic regression
   set.seed(123)
   fit <- glm(final~., data = data, 

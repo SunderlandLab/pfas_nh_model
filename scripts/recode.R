@@ -35,23 +35,23 @@ PFASwells1 <- PFASwells1 %>%
   recode('PFOA') %>%
   recode('PFOS')
 
-# drop the data that have LODs exceeding the 98th percentile
-drop_lod_g98 <- function(data, PFAS){
-  numeric_name <- paste0(PFAS, 'numeric') 
-  qualifier_name <- paste0(PFAS, 'qualifier')
-  results_name <- paste0(PFAS, 'results')
-  p98 <- quantile(data[[numeric_name]][data[[qualifier_name]] == '<'], prob = 0.98, na.rm = T)
-  data <- data %>%
-    filter(!(!!sym(qualifier_name) == "<" & !!sym(numeric_name) > p98))
-  return(data)
-}
-
-PFASwells1 <- PFASwells1 %>%
-  drop_lod_g98('PFPEA') %>%
-  drop_lod_g98('PFHXA') %>%
-  drop_lod_g98('PFHPA') %>%
-  drop_lod_g98('PFOA') %>%
-  drop_lod_g98('PFOS')
+# # drop the data that have LODs exceeding the 98th percentile
+# drop_lod_g98 <- function(data, PFAS){
+#   numeric_name <- paste0(PFAS, 'numeric') 
+#   qualifier_name <- paste0(PFAS, 'qualifier')
+#   results_name <- paste0(PFAS, 'results')
+#   p98 <- quantile(data[[numeric_name]][data[[qualifier_name]] == '<'], prob = 0.98, na.rm = T)
+#   data <- data %>%
+#     filter(!(!!sym(qualifier_name) == "<" & !!sym(numeric_name) > p98))
+#   return(data)
+# }
+# 
+# PFASwells1 <- PFASwells1 %>%
+#   drop_lod_g98('PFPEA') %>%
+#   drop_lod_g98('PFHXA') %>%
+#   drop_lod_g98('PFHPA') %>%
+#   drop_lod_g98('PFOA') %>%
+#  drop_lod_g98('PFOS')
 
 # Create binary classifier for detect/non-detect --------------------------
 # Initialize columns
@@ -95,4 +95,47 @@ PFASwells <- PFASwells1 %>%
 colnames(PFASwells) <- gsub("results$", "reg", colnames(PFASwells))
 # Save --------------------------------------------------------------------
 saveRDS(PFASwells, '../../modeling_data/PFASwells.rds')
-
+# 
+# # describe the samples dropped
+# PFASwells0 <- read.csv("../../raw_data/PFAS_Ronly.csv", header = TRUE, sep = ",") %>%
+#   dplyr::select(-c(2,3))
+# colnames(PFASwells0)[1]<-"StationID"
+# pfoapfhxa <- read.csv("../../raw_data/PFOAPFHXA.csv")
+# colnames(pfoapfhxa)[1]<-"StationID"
+# 
+# PFASwells0 <- PFASwells0 %>%
+#   full_join(pfoapfhxa, by = "StationID") %>%
+#   rownames_to_column("SampleID")
+# 
+# glimpse(PFASwells0)
+# # read PFASwells1 from line 55
+# glimpse(PFASwells1)
+# 
+# dropped_samples <- PFASwells0 %>%
+#   filter(!SampleID %in% PFASwells1$SampleID)
+# # Remove wells with very high detection limits ----------------------------
+# summarize_lod2 <- function(data, PFAS){
+#   # PFAS is a string
+#   lods <- data %>% 
+#     filter(!!rlang::sym(paste0(PFAS, "qualifier")) == "<") %>%
+#     pull(!!rlang::sym(paste0(PFAS, "numeric")))
+#   hist(lods, main = PFAS, breaks = 10, xlab = "LOD (ng/L)")
+#   abline(v = case_when(PFAS %in% c("PFPEA", "PFHPA", "PFOS") ~ 5,
+#                        PFAS %in% c("PFOA", "PFHXA") ~ 8,
+#                        TRUE ~ NA_real_),
+#          col = "red")
+# }
+# par(mfrow= c(2,3))
+# summarize_lod2(dropped_samples, "PFPEA")
+# summarize_lod2(dropped_samples, "PFHXA")
+# summarize_lod2(dropped_samples, "PFHPA")
+# summarize_lod2(dropped_samples, "PFOA")
+# summarize_lod2(dropped_samples, "PFOS")
+# dropped_samples %>%
+#   dplyr::select(SampleID, contains("results")) %>%
+#   pivot_longer(-SampleID, names_to = "compounds", values_to = "results") %>%
+#   mutate(compounds = gsub("results", "", compounds)) %>%
+#   ggplot(aes(results)) +
+#   geom_histogram() +
+#   facet_wrap(~compounds, scales = "free_x") +
+#   xlab("numeric results (ng/L)")

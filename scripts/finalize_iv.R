@@ -39,7 +39,7 @@ merged_variables <- Reduce(function(dtf1, dtf2) merge(dtf1, dtf2, by = "StationI
                                 final_soildata, 
                                 unique_bedrock))
 
-indvars <- merged_variables[,c(1,14:length(merged_variables))]
+indvars <- merged_variables[,c(1,15:length(merged_variables))]
 unique_ivs <- unique(indvars)
 
 sapply(unique_ivs, function(x){sum(is.na(x))})
@@ -57,7 +57,7 @@ sapply(unique_ivs, function(x){sum(is.na(x))})
 #replacing with column mean
 #where var is iterating through the precip, recharge, and soil columns
 #soil properties, impute missing as column average
-for (var in c(2:3,12:ncol(unique_ivs))) {
+for (var in c(2:3,14:ncol(unique_ivs))) {
   if (var <= 3)
   {
     avg <- mean(unique_ivs[,var], na.rm = TRUE)
@@ -71,7 +71,7 @@ for (var in c(2:3,12:ncol(unique_ivs))) {
 }
 
 #impact from industry, impute missing as zero
-for(var in c(4:11)) {
+for(var in c(4:13)) {
   unique_ivs[is.na(unique_ivs[,var]), var] <- 0
 }
 # Condense number of categories for categorical variables -----------------
