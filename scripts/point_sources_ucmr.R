@@ -184,6 +184,8 @@ final_industries <- impact %>%
   dplyr::select(c("StationID", contains("Impact")))
 
 final_industries%>%
+  mutate(ImpactOI = ImpactOI + ImpactS + ImpactPr + ImpactM + ImpactT) %>%
+  dplyr::select(-c(ImpactS, ImpactPr, ImpactM, ImpactT)) %>%
       pivot_longer(-StationID) %>%
       mutate(value = if_else(value>0, 1, 0)) %>%
       group_by(name) %>%
