@@ -12,34 +12,6 @@ compounds_glm <- readRDS("../../models/compounds_glm.rds")
 
 # Evaluate models ---------------------------------------------------------
 
-# # Sensitivity and specificity analysis ------------------------------------
-# 
-# 
-# sens_spec_tables_alt<- map(compounds_logreg_alt, function(clist) {
-#   predicted_classes <- clist[['predicted_classes']]
-#   observed_classes <- clist[['test_data']]$final
-#   return(table(predicted_classes, observed_classes))
-# })
-# 
-# calc_model_performance<-function(x) {
-#   
-#   #input is a two by two table where observed classes are listed horizontally
-#   #and predicted classes are listed vertically
-#   
-#   accuracy <- (x[1,1] + x[2,2])/sum(x)
-#   spec <- x[1,1]/(x[1,1] + x[2,1])
-#   sens <- x[2,2]/(x[2,2] + x[1,2])
-#   
-#   return(list(accuracy = accuracy,
-#               spec = spec,
-#               sens = sens))
-# }
-
-# # 
-# map_df(sens_spec_tables_alt, calc_model_performance, .id = "compound")%>%
-#   write_csv("../../output/sens_spec_alt_logreg_01252021.csv")
-
-
 stargazer2 <- function(model, odd.ratio = F, ...) {
   if(!("list" %in% class(model))) model <- list(model)
   
@@ -83,7 +55,7 @@ stargazer(lapply(compounds_logreg, function(x){x[["model_std"]]}),
            order = c("Industry: P", "Industry: T", "Industry: A", 
                      "Industry: M", "Industry: W", "Industry: O",
                      "Geo", "Hydro", "Soil"),
-           out="../../output/logmodel_std_04072021.txt")
+           out="../../output/logmodel_std.txt")
 
 
 

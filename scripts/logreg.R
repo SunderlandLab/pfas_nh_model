@@ -19,7 +19,6 @@ level_key <- c("final" = "final",
                "Soil: Cation exchange capacity" = "cec7_r",
                "Soil: Percent total clay" = "claytotal_r",
                "Hydro: Slope gradient" = "slopegradwta",
-               #"ImpactPr" = "Industry: Printing industry",
                "Soil: Organic carbon" ='soc0_999',
                "Soil: Bulk density" = "dbthirdbar_r",
                "Soil: Available water capacity" = "awc_r",
@@ -27,41 +26,14 @@ level_key <- c("final" = "final",
                "Industry: Airports" = "ImpactAirports",
                "Industry: Wastewater treatment plant" = "ImpactWWTP",
                "Industry: Military AFFF" = "ImpactMilitary",
-               #"ImpactM" = "Industry: Metal plating",
                "Soil: Thickness of soil horizon" = "hzdep",
                "Geo: Bedrock type" = "bedrock_M",
                "Hydro: Low runoff potential" = "hydgrpdcdA",
-               #"ImpactS" = "Industry: Semiconductor manufacturing",
                "Hydro: Depth to water table" = "wtdepannmin",
                "Geo: Depth to bedrock" = "brockdepmin",
                "Soil: Percent total sand" = "sandtotal_r",
                "Soil: Saturated hydraulic conductivity" = "ksat_r")
-# level_key <- c("final" = "final",
-#               "ImpactPlastics" = "Industry: Plastics and rubber", 
-#                "recharge" = "Hydro: Groundwater recharge",
-#                "precip" = "Hydro: Monthly precipitation",
-#                "ImpactTextile" = "Industry: Textiles manufacturing",
-#                "silttotal_r" = "Soil: Percent total silt",
-#                "cec7_r" = "Soil: Cation exchange capacity",
-#                "claytotal_r" = "Soil: Percent total clay",
-#                "slopegradwta" = "Hydro: Slope gradient",
-#                #"ImpactPr" = "Industry: Printing industry",
-#                "soc0_999" = "Soil: Organic carbon",
-#                "dbthirdbar_r" = "Soil: Bulk density",
-#                "awc_r" = "Soil: Available water capacity",
-#                "ImpactOI" = "Industry: Other",
-#                "ImpactAirports" = "Industry: Airports",
-#                "ImpactWWTP" = "Industry: Wastewater treatment plant",
-#                "ImpactMilitary" = "Industry: Military AFFF",
-#                #"ImpactM" = "Industry: Metal plating",
-#                "hzdep" = "Soil: Thickness of soil horizon",
-#                "bedrock_M" = "Geo: Bedrock type",
-#                "hydgrpdcdA" = "Hydro: Low runoff potential",
-#                #"ImpactS" = "Industry: Semiconductor manufacturing",
-#                "wtdepannmin" = "Hydro: Depth to water table",
-#                "brockdepmin" = "Geo: Depth to bedrock",
-#                "sandtotal_r" = "Soil: Percent total sand",
-#                "ksat_r" = "Soil: Saturated hydraulic conductivity")
+
 # use full dataset to fit model
 ## set up empty list
 compounds_logreg <- list()
@@ -141,39 +113,5 @@ for (comp in compounds) {
          auc_ub = auc_ub)
 }
 
-# compounds_logreg_alt <- map(compounds_data, function(data) {
-#   set.seed(123)
-#   #set.seed(123)
-#   # drop station ID, reg
-#   data<-data %>%
-#     dplyr::select(-c(StationID, reg))
-#   # Divide into training and test sets, 70-30%
-#   p <- sample(nrow(data),floor(0.7*nrow(data)))
-#   train_data <- data[p, ]
-#   test_data <- data[-p, ]
-#   # Save model after stepwise regression
-#   model <- glm(final ~ ., data = train_data, family = binomial(link = "logit")) %>% 
-#     stepAIC(trace = FALSE, direction = "both")
-#   # Predict classes
-#   probabilities <- model %>% predict(test_data, type = "response")
-#   #plotROC(test_data$final, probabilities)
-#   optCutOff <- optimalCutoff(test_data$final, probabilities)[1] 
-#   #print(optCutOff)
-#   #sensitivity(test_data$final, probabilities, threshold = optCutOff)
-#   #specificity(test_data$final, probabilities, threshold = optCutOff)
-#   #print(DescTools::VIF(model))
-#   predicted_classes <- ifelse(probabilities > optCutOff, 1, 0)
-#   
-#   return(list(model, train_data, test_data, predicted_classes) %>% 
-#            set_names('model', 'train_data', 'test_data', 'predicted_classes'))
-# })
-
 # Save --------------------------------------------------------------------
 saveRDS(compounds_glm, '../../models/compounds_glm.rds')
-
-# colocation of industries
-
-# M<-compounds_data[[1]] %>%
-#   dplyr::select(starts_with("Impact")) %>%
-#   cor()
-# corrplot::corrplot(M, method = "number", type = "lower", diag = F)

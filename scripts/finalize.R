@@ -3,9 +3,8 @@
 
 library(tidyverse)
 library(kableExtra)
-library(pacman)
 library(flextable)
-p_load("docxtools")
+library(docxtools)
 
 # Load --------------------------------------------------------------------
 

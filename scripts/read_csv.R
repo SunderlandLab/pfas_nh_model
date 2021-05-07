@@ -40,7 +40,7 @@ PFASwells1 <- PFASwells1 %>%
   filter(!(PFOAqualifier == "<" & PFOAnumeric > 5*summarize_lod(PFASwells1, "PFOA")["50%"]))%>%
   filter(!(PFOSqualifier == "<" & PFOSnumeric > 5*summarize_lod(PFASwells1, "PFOS")["50%"]))
 # removed 254(1.6%) samples
-nrow(PFASwells1)/16315-1
+#nrow(PFASwells1)/16315-1
 # LODs in the updated data
 summarize_lod(PFASwells1, "PFPEA")
 summarize_lod(PFASwells1, "PFHXA")

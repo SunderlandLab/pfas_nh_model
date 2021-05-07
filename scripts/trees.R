@@ -11,7 +11,6 @@ library(pROC)
 # Load --------------------------------------------------------------------
 
 compounds_data <- readRDS('../../modeling_data/compounds_data.rds')
-#compounds_logreg_alt <- readRDS('../../models/compounds_logreg_01232021.rds')
 
 compounds <- names(compounds_data)
 parameters <- data.frame(compound = c("PFOA","PFHXA","PFPEA","PFHPA","PFOS", "PFAS"),
@@ -72,24 +71,13 @@ for (comp in compounds) {
                          mtry = reg_parameters[reg_parameters$compound == comp, 'mtry'],
                          nodesize = reg_parameters[reg_parameters$compound == comp, 'nodesize'],
                          importance = TRUE)
-  # 
-  # outbag_predictions <- reg_forest %>% predict(reg_test)
-  # test.err <- mean((reg_test$reg_log - outbag_predictions)^2)
-  # # test.err <- with(reg_test, mean((log(reg_test$reg) - outbag_predictions)^2))
-  # test.rsq <- 1-(test.err/var(reg_test$reg_log))
-  
+
   compounds_forest[[comp]] <- 
     list(forest = forest, 
-         #reg_forest = reg_forest, 
-         #train_data = clist[['train_data']], 
-         #test_data = clist[['test_data']], 
          perf.rf = perf.rf,
          mean_auc = mean_auc,
          auc_lb = auc_lb,
          auc_ub = auc_ub)
-         # outbag_predictions = outbag_predictions,
-         # test_err = test.err,
-         # test.rsq = test.rsq)
 }
 
 

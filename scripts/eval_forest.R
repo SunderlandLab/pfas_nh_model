@@ -16,128 +16,6 @@ options(scipen=999)
 compounds_forest <- readRDS('../../models/compounds_forest.rds')
 compounds_data <- readRDS('../../modeling_data/compounds_data.rds')
 compounds_glm <- readRDS("../../modeling_data/compounds_glm.rds")
-# compounds_data %>%
-#   map(function(x){
-#     x %>% 
-#       dplyr::select(StationID, final)
-#   }) %>%
-#   saveRDS("../../modeling_data/wells_with_label.rds")
-
-
-# Tune model --------------------------------------------------------------
-# Determine which combo minimizes error and maximizes predictive accuracy
-# TAKES A LONG TIME TO RUN
-# 
-# compounds <- names(compounds_forest)
-# 
-# tuned_models <- list()
-# for (comp in compounds) {
-#   ntrees <- 1000
-#   form <- as.formula("final~.")
-#   num_vars <- ncol(compounds_forest[[comp]][['train_data']])
-#   predictions_table <- data.frame("mtry" = rep(0,(num_vars - 4)*10),
-#                                   "nodesize" = rep(0,(num_vars - 4)*10),
-#                                   "predictive accuracy" = rep(0,(num_vars - 4)*10))
-#   error_table <- data.frame("tree.index" = c(1:ntrees))
-#   tracker <- 1
-#   for (i in 1:(num_vars - 4)) {
-#     for (j in 1:10) {
-#       mt <- i + 4 # Because starting at 5, not 1
-#       model <- randomForest(form,
-#                             data = compounds_forest[[comp]][['train_data']],
-#                             mtry = mt,
-#                             ntree = ntrees,
-#                             nodesize = j,
-#                             importance = TRUE)
-#       error_table <- cbind(error_table, model$err.rate[,1])
-#       col_name <- paste0("m",i,"ns",j)
-#       print(col_name)
-#       names(error_table)[tracker + 1] <- col_name
-#       predictions <- model %>% predict(compounds_forest[[comp]][['test_data']], type = "class")
-#       predictions_table[tracker, 1] <- mt
-#       predictions_table[tracker, 2] <- j
-#       predictions_table[tracker, 3] <- mean(predictions == compounds_forest[[comp]][['test_data']]$final)
-#       print(tracker)
-#       tracker <- tracker + 1
-#     }
-#     tuned_models[[comp]] <- list(predictions_table = predictions_table,
-#                    error_table = error_table)
-#   }
-# }
-# 
-# saveRDS(tuned_models, '../../models_forest_eval/tuned_models01252021.rds')
-# 
-# for (comp in compounds) {
-#   print(comp)
-#   index <- which.max(tuned_models[[comp]]$predictions_table$predictive.accuracy)
-#   print(tuned_models[[comp]]$predictions_table[index,])
-# }
-
-# Tune random forest regression model
-# 
-# tuned_reg_models <- list()
-# for (comp in compounds) {
-#   ntrees <- 500
-#   # limit to wells with detectable levels
-#   reg <- compounds_data[[comp]][compounds_data[[comp]]$final == 1, ]%>%
-#     mutate(reg_log = log(reg))%>%
-#     dplyr::select(-c(StationID, reg, final))
-#   set.seed(123)
-#   ids <- sample(0.7*nrow(reg))
-#   reg_train <- reg[ids,]
-#   reg_test <- reg[-ids,]
-#   form <- as.formula("reg_log~.")
-#   num_vars <- ncol(reg)
-#   predictions_table <- data.frame("mtry" = rep(0,(num_vars - 4)*10),
-#                                   "nodesize" = rep(0,(num_vars - 4)*10),
-#                                   "RMSE" = rep(0,(num_vars - 4)*10))
-#   error_table <- data.frame("tree.index" = c(1:ntrees))
-#   tracker <- 1
-#   for (i in 1:(num_vars - 4)) {
-#     for (j in 1:10) {
-#       mt <- i + 4 # Because starting at 5, not 1
-#       model <- randomForest(form,
-#                      data = reg_train,
-#                      mtry = mt,
-#                      ntree = ntrees,
-#                      nodesize = j,
-#                      importance = TRUE)
-#       error_table <- cbind(error_table, model$mse)
-#       col_name <- paste0("m",i,"ns",j)
-#       print(col_name)
-#       names(error_table)[tracker + 1] <- col_name
-#       predictions <- model %>% predict(reg_test)
-#       predictions_table[tracker, 1] <- mt
-#       predictions_table[tracker, 2] <- j
-#       predictions_table[tracker, 3] <- RMSE(predictions, reg_test$reg_log)
-#       print(tracker)
-#       tracker <- tracker + 1
-#     }
-#     tuned_reg_models[[comp]] <- list(predictions_table = predictions_table,
-#                    error_table = error_table)
-#   }
-# }
-# 
-# saveRDS(tuned_reg_models, '../../models_forest_eval/tuned_reg_models02012021.rds')
-# 
-# for (comp in compounds) {
-#   print(comp)
-#   index <- which.min(tuned_reg_models[[comp]]$predictions_table$RMSE)
-#   print(tuned_reg_models[[comp]]$predictions_table[index,])
-# }
-
-
-# Sensitivity and specificity analysis ------------------------------------
-
-# sens_spec_tablesf <- map(compounds_forest, function(clist) {
-#   predicted_classes <- clist[['predictions']]
-#   observed_classes <- clist[['test_data']]$final
-#   print(mean(predicted_classes == observed_classes))
-#   return(table(predicted_classes, observed_classes))
-# })
-# 
-# map_df(sens_spec_tablesf, calc_model_performance, .id = "compound")%>%
-#  write_csv("../../output/sens_spec_alt_rf_02022021.csv")
 
 # ROC curve and confidence interval
 compounds <- names(compounds_data)
@@ -155,9 +33,6 @@ for(i in 1:6){
   comp <- compounds[i]
   perf.rf <- compounds_forest[[comp]]$perf.rf
   perf.glm <- compounds_glm[[comp]]$perf.glm
-  #mean_auc <- compounds_forest[[comp]]$mean_auc
-  #auc_lb <- compounds_forest[[comp]]$auc_lb
-  #auc_ub <- compounds_forest[[comp]]$auc_ub
   #corret the lower/upper case in PFAS names
   comp <- case_when(comp == "PFPEA" ~ "PFPeA",
                     comp == "PFHPA" ~ "PFHpA",
@@ -204,7 +79,6 @@ level_key <- c("final" = "final",
                "cec7_r" = "Soil: Cation exchange capacity",
                "claytotal_r" = "Soil: Percent total clay",
                "slopegradwta" = "Hydro: Slope gradient",
-               #"ImpactPr" = "Industry: Printing industry",
                "soc0_999" = "Soil: Organic carbon",
                "dbthirdbar_r" = "Soil: Bulk density",
                "awc_r" = "Soil: Available water capacity",
@@ -212,11 +86,9 @@ level_key <- c("final" = "final",
                "ImpactAirports" = "Industry: Airports",
                "ImpactWWTP" = "Industry: Wastewater treatment plant",
                "ImpactMilitary" = "Industry: Military AFFF",
-               #"ImpactM" = "Industry: Metal plating",
                "hzdep" = "Soil: Thickness of soil horizon",
                "bedrock_M" = "Geo: Bedrock type",
                "hydgrpdcdA" = "Hydro: Low runoff potential",
-               #"ImpactS" = "Industry: Semiconductor manufacturing",
                "wtdepannmin" = "Hydro: Depth to water table",
                "brockdepmin" = "Geo: Depth to bedrock",
                "sandtotal_r" = "Soil: Percent total sand",
@@ -244,11 +116,13 @@ var_imp_df%>%
   geom_bar(stat = "identity", color = "grey50") +
   scale_fill_viridis(guide = guide_colorbar(frame.colour = "grey50", frame.linewidth = 2)) +
   coord_flip() +
+ #ylim(0, 0.1)+
   facet_grid(group ~ name, scales = "free_y", space = "free") +
   xlab("")+
   ylab("Relative contribution to accuracy") +
   theme_classic() + 
   theme(text = element_text(size = 16),
+        panel.spacing = unit(1, "lines"),
         strip.text = element_text(size = 16),
         axis.text.x = element_text(size = 16, angle = 90, hjust = 1),
         axis.text.y = element_text(size = 16),

@@ -225,33 +225,7 @@ p1<-df_a%>%
         axis.text.x = element_text(size = 16),
         axis.text.y = element_text(size = 16),
         legend.position = "bottom")
-# p2<-df_a%>%
-#   left_join(df_b, by = "StationID", suffix = c(".10k", ".30k")) %>%
-#   #filter(ImpactPl10k != ImpactPl30k | ImpactT10k != ImpactT30k) %>%
-#   dplyr::select(contains("ImpactPlastics") | contains("ImpactTextile")) %>%
-#   pivot_longer(everything(), names_to = "variable", values_to = "value") %>%
-#   separate(variable, into = c("industry", "distance")) %>%
-#   ggplot(aes(x = value)) +
-#   geom_density(aes(fill = distance), alpha = 0.4) +
-#   facet_wrap(~ industry, scales = "free",  
-#              labeller = labeller(industry = c(ImpactPlastics = "Plastics and rubber",
-#                                               ImpactTextile ="Textile manufacturing"))) +
-#   scale_fill_brewer(palette = "Set1")+
-#   scale_x_continuous(trans = "log10",
-#                      name = bquote('Industrial impact'~(km^-1))) +
-#   theme_classic() +
-#   labs(fill='Buffer distance', y = "Density")+
-#   theme(text = element_text(size = 16),
-#         strip.text = element_text(size = 16),
-#         axis.text.x = element_text(size = 16),
-#         axis.text.y = element_text(size = 16),
-#         legend.title = element_text(size = 16),
-#         legend.key.size = unit(1, "cm"),
-#         legend.text = element_text(size = 16),
-#         legend.position="bottom")
-# ggpubr::ggarrange(p1, p2, 
-#                   labels = c("A", "B"),
-#                   ncol = 1, nrow = 2)
+
 ggsave(plot = p1, "../../output/Figure_sens_buffer_size.png",width = 9,
        height = 5,
        units = "in")
