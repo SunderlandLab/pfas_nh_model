@@ -37,3 +37,18 @@ vignettes/*.pdf
 
 # R Environment Variables
 .Renviron
+
+
+# HUC watershed boundary shapefiles
+wbdhu12_a_us_september2020.gdb/
+wbdhu10_a_us_september2020.gdb/
+
+# Industry and well shapefiles
+shapefiles/
+
+# Personal notes
+BJR/
+
+# DS_Store files
+*.DS_Store
+

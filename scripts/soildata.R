@@ -50,26 +50,37 @@ component_categorical <- component1[,c(2, 28:29)]
 x <- duplicated(component_categorical$mukey)
 y <- component_categorical[!x,]
 
-component_numeric <- component1[, c(2,4:27)]
-# Revisit: perhaps there's a better way in which for a given mukey, if all the values are 
-# NA, the final value should be NA...ask Cindy - replace NAs with means?
+#old
+#component_numeric <- component1[, c(2,4:27)]
 
+#new (only keeping silt total, sand total, and clay total)
+component_numeric <- component1[, c(2,4:6,12,15:27)]
+
+# Revisit: perhaps there's a better way in which for a given mukey, if all the values are 
+# NA, the final value should be NA.
+
+#adding 0.001 to distinguish true zeroes - after aggregation, true zeroes are nonzero and false zeroes are zero
+component_numeric[,-1] <- component_numeric[,-1] + 0.00001
 z <- aggregate(component_numeric[,-1], by = list(component_numeric$mukey), FUN = sum, na.rm = T)
 colnames(z)[colnames(z) == "Group.1"] <- "mukey"
 all_vars <- merge(z,y, by = "mukey")
 merged <- merge(unique1, all_vars, by = "mukey", all.x=TRUE)
 merged$hzdep <- merged$hzdepb_r - merged$hzdept_r
+#1227 edit - kept pH in for now
 merged$hzdepb_r = merged$hzdept_r = merged$ph01mcacl2_r = merged$slopegraddcp <- NULL
-final_soildata <- merged[, c(2,5:24,27,25:26)]
+#old
+#final_soildata <- merged[, c(2,5:24,27,25:26)]
+final_soildata <- merged[,-c(1,3:4)]
+#reordering columns so hzdep is with the other quantitative variables
+final_soildata <- final_soildata[,c(1:14,17,15:16)]
 
 
 # Remove rows with all NA's -----------------------------------------------
 
 final_soildata <- final_soildata[-c(2365:2369),]
 
-
+sapply(final_soildata, function(x){sum(is.na(x))})
 # Save --------------------------------------------------------------------
 
 saveRDS(final_soildata, '../../modeling_data/final_soildata.rds')
-
 
