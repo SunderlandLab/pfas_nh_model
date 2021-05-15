@@ -2,13 +2,15 @@
 ## Introduction
 Source code for the paper:
 A Statistical Approach for Identifying Private Wells Susceptible to Perfluoroalkyl Substances (PFAS)Contamination.
+Environmental Science & Technology Letters Article ASAP
+[DOI: 10.1021/acs.estlett.1c00264](https://pubs.acs.org/doi/10.1021/acs.estlett.1c00264)
 
 ## Authors
-* Xindi C. Hu
+* [Xindi C. Hu](https://www.mathematica.org/our-people/staff/cindy-hu)
 * Beverly Ge
 * Bridger Ruyle
 * Jennifer Sun
-* Elsie M. Sunderland
+* [Elsie M. Sunderland](https://bgc.seas.harvard.edu/)
 
 ##  Order and purpose of scripts (output given in parentheses)
 All can be found in the /scripts folder
