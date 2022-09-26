@@ -19,7 +19,11 @@ PFASwells$PFASfinal <- PFASwells %>%
   dplyr::select(ends_with("final")) %>%
   as.matrix() %>%
   matrixStats::rowMaxs( na.rm = T)
-
+unique <- read.csv("../../raw_data/actual_unique.csv", header = TRUE, sep = ",")[,-1]
+PFASwells %>%
+  left_join(unique, by = "StationID") %>%
+  filter(!is.na(Longitude) & !is.na(Latitude)) %>%
+  write_csv("../../modeling_data/PFASwells_clean.csv")
 # Remove duplicates and aggregate -----------------------------------------
 
 unique_bedrock <- unique(bedrock)
