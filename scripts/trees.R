@@ -7,10 +7,11 @@ library(caret)
 library(tidyverse)
 library(reshape2)
 library(pROC)
+library(ROCR)
 
 # Load --------------------------------------------------------------------
 
-compounds_data <- readRDS('../../modeling_data/compounds_data.rds')
+compounds_data <- readRDS(file.path(here::here(), '../modeling_data/compounds_data.rds'))
 
 compounds <- names(compounds_data)
 parameters <- data.frame(compound = c("PFOA","PFHXA","PFPEA","PFHPA","PFOS", "PFAS"),
@@ -25,14 +26,14 @@ reg_parameters <- data.frame(compound = c("PFOA","PFHXA","PFPEA","PFHPA","PFOS",
 
 
 compounds_forest <- list()
-for (comp in compounds) {
+for (comp in compounds[1]) {
   # remove stationID and continous outcome
   data <- compounds_data[[comp]] %>%
     dplyr::select(-c(StationID, reg))
   # Forest 1: Classification
   set.seed(123)
   # 10 fold validation
-  # Helper functions -----------------------------------------------------------
+  # Helper functions --------------------------                           ---------------------------------
   .cvFolds <- function(Y, V){  #Create CV folds (stratify by outcome)
     Y0 <- split(sample(which(Y==0)), rep(1:V, length=length(which(Y==0))))
     Y1 <- split(sample(which(Y==1)), rep(1:V, length=length(which(Y==1))))
@@ -56,7 +57,7 @@ for (comp in compounds) {
   rf.predictions <- sapply(seq(10), .doFit, folds=folds, data=data) 
   rf.labels <- sapply(folds, function(x){data$final[x]})
   # apply prediction function from RORC package
-  pred.rf <- prediction(rf.predictions, rf.labels)
+  pred.rf <- ROCR::prediction(rf.predictions, rf.labels)
   perf.rf <- performance(pred.rf, 'tpr', 'fpr')
   # calculate the AUC for the 10 ROC curves
   auc <- performance(pred.rf, "auc")
