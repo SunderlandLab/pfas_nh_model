@@ -174,19 +174,4 @@ m<-tm_shape(nh_map) +
             frame = F)
 tmap_save(m, "../../output/Figure3_pred_vs_obs.png")
 
-######################
-# TOC map for PFOA + PFOS #
-######################
-us_map <- tigris::states(cb = TRUE) %>%
-  st_as_sf()%>%
-  st_transform(2163) %>%
-  filter(!STUSPS %in% c("HI", "AK", "PR", "AS", "VI", "GU", "MP")) %>%
-  mutate(flag = if_else(STUSPS == "NH", 1, 0))
 
-m3<-tm_shape(us_map) +
-  tm_borders("black") +
-  tm_fill(col = "flag",
-          palette = c("white", "red"),
-          legend.show = FALSE) + 
-  tm_layout(frame = F)
-tmap_save(m3, "../../output/US_map.png")

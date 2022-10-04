@@ -84,3 +84,23 @@ png("../../output/gw_recharge_raster.png")
 plot(raster_recharge, col = RColorBrewer::brewer.pal('Blues', n=11), main = "Groundwater recharge",
      axes=FALSE, box=FALSE, legend = FALSE)
 dev.off()
+
+######################
+# TOC map for PFOA + PFOS #
+######################
+library(tidyverse)
+library(tmap)
+library(sf)
+us_map <- tigris::states(cb = TRUE) %>%
+  st_as_sf()%>%
+  st_transform(2163) %>%
+  filter(!STUSPS %in% c("HI", "AK", "PR", "AS", "VI", "GU", "MP")) %>%
+  mutate(flag = if_else(STUSPS == "NC", 1, 0))
+
+m3<-tm_shape(us_map) +
+  tm_borders("black") +
+  tm_fill(col = "flag",
+          palette = c("white", "black"),
+          legend.show = FALSE) + 
+  tm_layout(frame = F)
+tmap_save(m3, "../../output/US_map_NC.png")
